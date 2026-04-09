@@ -1,0 +1,59 @@
+<%- include('_head', { title: 'Usuwanie klastra', currentPath: '/status' }) %>
+
+<div class="space-y-4">
+
+  <div>
+    <h1 class="text-2xl font-bold text-white">Usuwanie klastra</h1>
+    <% if (install) { %>
+      <p class="text-slate-400 text-sm mt-0.5">
+        Klaster: <span class="text-slate-200 font-mono"><%= install.cluster_name %>.<%= install.base_domain %></span>
+        &nbsp;·&nbsp; Projekt: <span class="text-slate-200 font-mono"><%= install.gcp_project %></span>
+      </p>
+    <% } %>
+  </div>
+
+  <!-- Status indicator -->
+  <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+    <div class="flex items-center gap-2">
+      <div id="statusIndicator" class="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"></div>
+      <span id="statusText" class="text-sm font-medium text-red-300">Usuwanie klastra w toku...</span>
+    </div>
+  </div>
+
+  <!-- Terminal log viewer -->
+  <div class="bg-slate-950 border border-slate-700 rounded-xl overflow-hidden">
+    <div class="flex items-center gap-3 px-4 py-2.5 bg-slate-900 border-b border-slate-700">
+      <div class="flex gap-1.5">
+        <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+        <div class="w-3 h-3 rounded-full bg-yellow-500/60"></div>
+        <div class="w-3 h-3 rounded-full bg-green-500/60"></div>
+      </div>
+      <span class="text-xs text-slate-500 font-mono">openshift-install destroy cluster</span>
+      <label class="ml-auto flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
+        <input type="checkbox" id="autoScrollToggle" checked class="accent-rh-red w-3 h-3">
+        Auto-scroll
+      </label>
+      <span id="lineCount" class="text-xs text-slate-600 font-mono">0 linii</span>
+    </div>
+
+    <div id="logContainer" class="h-[28rem] overflow-y-auto p-4 font-mono text-xs leading-5">
+      <div id="logLines"></div>
+      <div id="logCursor" class="inline-block w-2 h-3.5 bg-slate-500 animate-pulse ml-0.5"></div>
+    </div>
+  </div>
+
+  <div class="bg-red-950/50 border border-red-900 rounded-xl px-5 py-3 text-sm text-red-300">
+    <span class="font-medium">Usuwanie może trwać 15–30 minut.</span>
+    Wszystkie zasoby GCP klastra zostaną trwale usunięte.
+  </div>
+
+</div>
+
+<%- include('_foot') %>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  window.INSTALL_ID = '<%= installId %>';
+</script>
+<script src="/js/destroy.js"></script>
+</body>
+</html>

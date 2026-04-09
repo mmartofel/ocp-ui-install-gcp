@@ -1,0 +1,109 @@
+<%- include('_head', { title: 'Logowanie do GCP', currentPath: '/auth' }) %>
+
+<div class="max-w-3xl mx-auto mt-8">
+  <h1 class="text-2xl font-bold text-white mb-2">Logowanie do Google Cloud Platform</h1>
+  <p class="text-slate-400 mb-6 text-sm">
+    Wgraj plik JSON konta serwisowego GCP. Klucz jest przechowywany tylko w pamięci przez 4 godziny
+    i usuwany po zakończeniu instalacji.
+  </p>
+
+  <% if (locals.warning === 'session_expired') { %>
+  <div class="bg-yellow-900/40 border border-yellow-700 rounded-lg p-4 mb-6 text-yellow-200 text-sm">
+    Sesja wygasła. Zaloguj się ponownie.
+  </div>
+  <% } %>
+
+  <div class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+
+    <div class="flex gap-2 mb-5 border-b border-slate-700 pb-4">
+      <button id="tab-upload" onclick="switchTab('upload')"
+              class="tab-btn active px-4 py-1.5 rounded text-sm font-medium transition-colors">
+        Wgraj plik JSON
+      </button>
+      <button id="tab-paste" onclick="switchTab('paste')"
+              class="tab-btn px-4 py-1.5 rounded text-sm font-medium transition-colors text-slate-400 hover:text-slate-200">
+        Wklej JSON
+      </button>
+    </div>
+
+    <form id="authForm" enctype="multipart/form-data">
+
+      <div id="panel-upload">
+        <label class="block">
+          <div id="dropzone"
+               class="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-rh-red transition-colors group">
+            <svg class="w-12 h-12 mx-auto mb-3 text-slate-500 group-hover:text-rh-red transition-colors"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-slate-400 text-sm">Przeciągnij plik <span class="text-white font-mono">.json</span> lub kliknij</p>
+            <p class="text-slate-600 text-xs mt-1">Plik konta serwisowego GCP (service account key)</p>
+            <input type="file" id="credentialsFile" name="credentialsFile" accept=".json" class="hidden">
+          </div>
+        </label>
+        <p id="fileName" class="mt-2 text-sm text-green-400 hidden"></p>
+      </div>
+
+      <div id="panel-paste" class="hidden">
+        <label class="block text-sm text-slate-400 mb-2">JSON konta serwisowego</label>
+        <textarea id="credentialsJson" name="credentialsJson" rows="10"
+                  placeholder='{ "type": "service_account", "project_id": "...", ... }'
+                  class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-sm font-mono
+                         text-slate-200 focus:outline-none focus:border-rh-red resize-y"></textarea>
+      </div>
+
+      <div id="authMsg" class="hidden mt-4 p-3 rounded-lg text-sm"></div>
+
+      <div id="projectInfo" class="mt-4 p-3 rounded-lg text-sm border <%= sessionInfo ? 'bg-green-900/30 border-green-700' : 'bg-slate-800/50 border-slate-700' %>">
+        <p id="projectInfoStatus" class="font-medium <%= sessionInfo ? 'text-green-300 mb-1' : 'text-slate-500' %>">
+          <%= sessionInfo ? '✓ Aktywna sesja' : 'Brak aktywnej sesji' %>
+        </p>
+        <div id="projectInfoDetails" class="<%= sessionInfo ? '' : 'hidden' %> text-slate-300 space-y-0.5">
+          <p>Projekt: <span id="infoProjectName" class="text-white font-mono"><%= sessionInfo ? sessionInfo.projectId : '' %></span></p>
+          <p>ID projektu: <span id="infoProjectId" class="text-white font-mono"><%= sessionInfo ? sessionInfo.projectId : '' %></span></p>
+          <p>Konto: <span id="infoClientEmail" class="text-white font-mono text-xs"><%= sessionInfo ? sessionInfo.clientEmail : '' %></span></p>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn"
+              class="mt-5 w-full bg-rh-red hover:bg-red-700 text-white font-medium py-2.5 px-4
+                     rounded-lg transition-colors flex items-center justify-center gap-2">
+        <span id="submitLabel">Weryfikuj i kontynuuj</span>
+        <svg id="submitSpinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+      </button>
+
+    </form>
+  </div>
+
+  <details class="mt-4 bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+    <summary class="px-5 py-3 text-sm text-slate-400 cursor-pointer hover:text-slate-200 select-none">
+      Wymagane API w projekcie GCP
+    </summary>
+    <div class="px-5 pb-4 text-xs text-slate-400 border-t border-slate-700 pt-3">
+      <p class="mb-2">Włącz wymagane API poleceniami <code class="text-slate-300">gcloud</code>:</p>
+      <pre class="bg-slate-800 rounded-lg p-3 text-slate-300 overflow-x-auto leading-5"># Wymagane
+gcloud services enable compute.googleapis.com
+gcloud services enable cloudresourcemanager.googleapis.com
+gcloud services enable dns.googleapis.com
+gcloud services enable iamcredentials.googleapis.com
+gcloud services enable iam.googleapis.com
+gcloud services enable serviceusage.googleapis.com
+
+# Opcjonalne
+gcloud services enable storage.googleapis.com
+gcloud services enable storage-api.googleapis.com
+gcloud services enable file.googleapis.com
+gcloud services enable cloudasset.googleapis.com
+gcloud services enable deploymentmanager.googleapis.com</pre>
+    </div>
+  </details>
+</div>
+
+<%- include('_foot') %>
+<script src="/js/auth.js"></script>
+</body>
+</html>

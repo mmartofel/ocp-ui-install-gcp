@@ -1,0 +1,250 @@
+<%- include('_head', { title: 'Status klastra', currentPath: '/status' }) %>
+
+<div class="space-y-5">
+
+  <div id="sessionExpiredBanner" class="hidden bg-yellow-950/40 border border-yellow-700 rounded-xl p-4 flex items-center justify-between">
+    <p class="text-sm text-yellow-300">Sesja wygasła. Zaloguj się ponownie, aby odświeżyć dane klastra.</p>
+    <a href="/auth" class="text-xs text-yellow-400 hover:text-yellow-200 underline whitespace-nowrap ml-4">Zaloguj →</a>
+  </div>
+
+  <!-- Cluster list -->
+  <div class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-700">
+      <h2 class="text-sm font-semibold text-white">
+        Aktywne klastry
+        <span class="ml-2 text-xs text-slate-500 font-normal">projekt: <span class="font-mono"><%= install ? install.gcp_project : '' %></span></span>
+      </h2>
+      <a href="/config" class="px-3 py-1.5 text-xs bg-rh-red hover:bg-red-700 text-white rounded-lg transition-colors">
+        + Nowy klaster
+      </a>
+    </div>
+
+    <% if (!installs || installs.length === 0) { %>
+      <div class="px-5 py-10 text-center">
+        <p class="text-slate-500 text-sm">Brak zainstalowanych klastrów dla tego projektu GCP.</p>
+        <a href="/config" class="inline-block mt-3 text-xs text-rh-red hover:text-red-400">Zainstaluj pierwszy klaster →</a>
+      </div>
+    <% } else { %>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-800">
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Klaster</th>
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Region</th>
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Zainstalowano</th>
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Status</th>
+            <th class="px-5 py-2.5"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% installs.forEach(function(cl) { %>
+            <% var isSelected = install && install.install_id === cl.install_id; %>
+            <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 <%= isSelected ? 'bg-slate-800/40' : '' %>">
+              <td class="px-5 py-3">
+                <a href="/status?cluster=<%= cl.install_id %>"
+                   class="font-mono text-xs <%= isSelected ? 'text-white font-semibold' : 'text-blue-400 hover:text-blue-300' %>">
+                  <%= cl.cluster_name %>.<%= cl.base_domain %>
+                </a>
+              </td>
+              <td class="px-5 py-3 font-mono text-xs text-slate-400"><%= cl.gcp_region %></td>
+              <td class="px-5 py-3 text-xs text-slate-500">
+                <%= cl.finished_at ? new Date(cl.finished_at).toLocaleString('pl-PL') : '—' %>
+              </td>
+              <td class="px-5 py-3">
+                <span class="flex items-center gap-1.5 text-xs text-green-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                  Aktywny
+                </span>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <button
+                  onclick="openDestroyModal('<%= cl.install_id %>', '<%= cl.cluster_name %>.<%= cl.base_domain %>')"
+                  class="px-2.5 py-1 text-xs border border-red-900 hover:border-rh-red text-red-500 hover:text-red-400 rounded transition-colors">
+                  Usuń klaster
+                </button>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <!-- Destroyed clusters history -->
+  <% if (destroyedInstalls && destroyedInstalls.length > 0) { %>
+  <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+    <summary class="px-5 py-3.5 text-sm font-semibold text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+      Usunięte klastry
+      <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-700 text-xs font-mono text-slate-400"><%= destroyedInstalls.length %></span>
+    </summary>
+    <div class="border-t border-slate-700">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-800">
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Klaster</th>
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Region</th>
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Zainstalowano</th>
+            <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Usunięto</th>
+            <th class="px-5 py-2.5"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% destroyedInstalls.forEach(function(cl) { %>
+            <tr class="border-b border-slate-800/50 hover:bg-slate-800/20">
+              <td class="px-5 py-3 font-mono text-xs text-slate-500"><%= cl.cluster_name %>.<%= cl.base_domain %></td>
+              <td class="px-5 py-3 font-mono text-xs text-slate-600"><%= cl.gcp_region %></td>
+              <td class="px-5 py-3 text-xs text-slate-600">
+                <%= cl.finished_at ? new Date(cl.finished_at).toLocaleString('pl-PL') : '—' %>
+              </td>
+              <td class="px-5 py-3 text-xs text-slate-600">
+                <%= new Date(cl.destroyed_at).toLocaleString('pl-PL') %>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <% if (cl.install_yaml) { %>
+                  <a href="/download/install-config/<%= cl.install_id %>"
+                     class="px-2.5 py-1 text-xs border border-slate-700 hover:border-slate-500 text-slate-500 hover:text-slate-300 rounded transition-colors">
+                    Pobierz YAML
+                  </a>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </details>
+  <% } %>
+
+  <% if (install) { %>
+
+  <!-- Detail header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-white"><%= install.cluster_name %>.<%= install.base_domain %></h1>
+      <p class="text-slate-400 text-sm mt-0.5">
+        Region: <span class="text-slate-200 font-mono"><%= install.gcp_region %></span>
+        &nbsp;·&nbsp; Projekt: <span class="text-slate-200 font-mono"><%= install.gcp_project %></span>
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="refreshStatus()"
+              class="px-3 py-1.5 text-xs border border-slate-600 hover:border-slate-400 text-slate-400 hover:text-slate-200 rounded-lg transition-colors flex items-center gap-1.5">
+        <svg id="refreshIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Odśwież
+      </button>
+      <a href="/download/kubeconfig"
+         class="px-3 py-1.5 text-xs bg-rh-red hover:bg-red-700 text-white rounded-lg transition-colors">
+        Pobierz kubeconfig
+      </a>
+    </div>
+  </div>
+
+  <div id="refreshError" class="hidden bg-red-950/50 border border-red-800 rounded-xl px-4 py-2.5 text-xs text-red-300"></div>
+
+  <!-- Access info cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+      <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Konsola Web</p>
+      <a id="consoleUrl" href="#" target="_blank" rel="noopener noreferrer"
+         class="text-sm font-mono text-blue-400 hover:text-blue-300 break-all transition-colors">Ładowanie...</a>
+      <button onclick="copyVal('consoleUrl')" class="mt-2 text-xs text-slate-500 hover:text-slate-300 transition-colors">Kopiuj</button>
+    </div>
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+      <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">API URL</p>
+      <p id="apiUrl" class="text-sm font-mono text-blue-400 break-all">Ładowanie...</p>
+      <button onclick="copyVal('apiUrl')" class="mt-2 text-xs text-slate-500 hover:text-slate-300 transition-colors">Kopiuj</button>
+    </div>
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+      <p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">Hasło kubeadmin</p>
+      <p id="kubeadminPass" class="text-sm font-mono text-slate-300 blur-sm hover:blur-none transition-all cursor-pointer">ładowanie...</p>
+      <button onclick="copyVal('kubeadminPass')" class="mt-2 text-xs text-slate-500 hover:text-slate-300 transition-colors">Kopiuj</button>
+    </div>
+  </div>
+
+  <!-- Nodes table -->
+  <div class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-700">
+      <h2 class="text-sm font-semibold text-white">Węzły klastra</h2>
+      <span id="nodesReady" class="text-xs text-slate-500">Ładowanie...</span>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-800">
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Nazwa</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Rola</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Status</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Wersja</th>
+        </tr>
+      </thead>
+      <tbody id="nodesBody">
+        <tr><td colspan="4" class="px-5 py-4 text-slate-600 text-center text-xs">Ładowanie danych węzłów...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Operators table -->
+  <div class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-700">
+      <h2 class="text-sm font-semibold text-white">Operatory klastra</h2>
+      <span id="operatorsReady" class="text-xs text-slate-500"></span>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-800">
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Operator</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Dostępny</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Degradowany</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Wersja</th>
+        </tr>
+      </thead>
+      <tbody id="operatorsBody">
+        <tr><td colspan="4" class="px-5 py-4 text-slate-600 text-center text-xs">Ładowanie operatorów...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-xs text-slate-600 text-center">
+    Dane odświeżane co 60 sekund ·
+    <a href="/install" class="text-slate-500 hover:text-slate-300">Powrót do logów instalacji</a>
+  </p>
+
+  <% } %>
+
+  <!-- Destroy confirmation modal -->
+  <div id="destroyModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-red-800 rounded-xl p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Usunąć klaster?</h3>
+      <p class="text-slate-400 text-sm mb-1">Klaster: <span id="destroyClusterName" class="text-slate-200 font-mono text-xs"></span></p>
+      <p class="text-slate-400 text-sm mb-4">
+        Ta operacja jest <strong class="text-white">nieodwracalna</strong>.
+        Wszystkie zasoby GCP (VM, sieci, DNS) zostaną trwale usunięte.
+      </p>
+      <div id="destroyError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div class="flex gap-3">
+        <button onclick="closeDestroyModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="destroyConfirmBtn" onclick="confirmDestroy()"
+                class="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+          Usuń klaster
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<%- include('_foot') %>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  window.INSTALL_ID = '<%= installId %>';
+</script>
+<script src="/js/status.js"></script>
+</body>
+</html>

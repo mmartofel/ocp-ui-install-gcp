@@ -1,0 +1,9 @@
+node_modules/
+data/installer/
+data/db/
+tmp/
+*.log
+pull-secret.yaml
+pull-secret.json
+pull-secret.txt
+

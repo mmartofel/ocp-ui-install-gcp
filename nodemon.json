@@ -1,0 +1,5 @@
+{
+  "ignore": ["tmp/", "data/"],
+  "ext": "js,mjs,cjs,json,env",
+  "watch": ["."]
+}

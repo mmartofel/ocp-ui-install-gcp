@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> — OpenShift na GCP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { rh: { red: '#EE0000', dark: '#151515' } },
+          fontFamily: { mono: ['JetBrains Mono','Fira Code','Consolas','monospace'] }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen flex flex-col">
+
+<header class="bg-rh-dark border-b border-slate-800 px-6 py-3 flex items-center gap-4">
+  <div class="flex items-center gap-3">
+    <svg viewBox="0 0 32 32" class="w-8 h-8" fill="none">
+      <circle cx="16" cy="16" r="15" fill="#EE0000"/>
+      <path d="M16 6a10 10 0 1 0 0 20A10 10 0 0 0 16 6zm0 3a7 7 0 1 1 0 14A7 7 0 0 1 16 9zm0 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" fill="white"/>
+    </svg>
+    <span class="font-semibold text-white text-lg tracking-tight">Red Hat OpenShift Installer for Google Cloud Platform</span>
+  </div>
+
+  <nav class="ml-auto flex items-center gap-1 mr-4">
+    <% var navSteps = [
+      { href: '/auth',    label: 'Logowanie GCP', key: 'auth'    },
+      { href: '/config',  label: 'Konfiguracja',  key: 'config'  },
+      { href: '/install', label: 'Instalacja',    key: 'install' },
+      { href: '/status',  label: 'Status',        key: 'status'  },
+    ]; %>
+    <% navSteps.forEach(function(step, i) { %>
+      <% var isActive   = (currentPath || '').startsWith('/' + step.key); %>
+      <% var isBlocked  = (locals.hasRunningInstall && step.key !== 'install') || locals.hasRunningDestroy; %>
+      <div class="flex items-center gap-1">
+        <% if (isBlocked) { %>
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-slate-600 cursor-not-allowed select-none"
+              title="Niedostępne podczas instalacji">
+          <span class="w-5 h-5 rounded-full border border-slate-700 text-xs flex items-center justify-center text-slate-700">
+            <%= i + 1 %>
+          </span>
+          <span class="hidden sm:inline"><%= step.label %></span>
+        </span>
+        <% } else { %>
+        <a href="<%= step.href %>"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors <%= isActive ? 'bg-rh-red text-white font-medium' : 'text-slate-400 hover:text-slate-200' %>">
+          <span class="w-5 h-5 rounded-full border text-xs flex items-center justify-center
+                       <%= isActive ? 'border-white text-white' : 'border-slate-600 text-slate-500' %>">
+            <%= i + 1 %>
+          </span>
+          <span class="hidden sm:inline"><%= step.label %></span>
+        </a>
+        <% } %>
+        <% if (i < navSteps.length - 1) { %>
+          <span class="text-slate-700">›</span>
+        <% } %>
+      </div>
+    <% }); %>
+  </nav>
+
+  <% if (locals.isAuthenticated) { %>
+  <form action="/auth/logout" method="POST">
+    <button type="submit"
+            class="px-3 py-1.5 text-xs border border-slate-700 hover:border-red-700 text-slate-400 hover:text-red-400 rounded-lg transition-colors whitespace-nowrap">
+      Wyloguj z GCP
+    </button>
+  </form>
+  <% } else { %>
+  <button disabled
+          class="px-3 py-1.5 text-xs border border-slate-800 text-slate-700 rounded-lg cursor-not-allowed whitespace-nowrap">
+    Wyloguj z GCP
+  </button>
+  <% } %>
+</header>
+
+<main class="flex-1 p-6 max-w-7xl mx-auto w-full">
