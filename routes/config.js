@@ -6,12 +6,13 @@ const Joi      = require('joi');
 const validator= require('validator');
 const fs       = require('fs');
 const path     = require('path');
+const https    = require('https');
 const { exec } = require('child_process');
 
 const credentialStore     = require('../lib/credentialStore');
 const gcpValidator        = require('../lib/gcpValidator');
 const installConfigBuilder= require('../lib/installConfigBuilder');
-const { GCP_REGIONS, MACHINE_TYPES, NETWORK_TYPES } = require('../config/defaults');
+const { GCP_REGIONS, MACHINE_TYPES, NETWORK_TYPES, OCP_CHANNELS, OCP_DEFAULT_CHANNEL } = require('../config/defaults');
 
 function requireAuth(req, res, next) {
   if (!credentialStore.has(req.session.id)) {
@@ -41,6 +42,69 @@ function readFileSafe(filePath) {
   try { return fs.readFileSync(filePath, 'utf8').trim(); } catch (_) { return ''; }
 }
 
+// Semver sort for OCP version strings (e.g. "4.18.3") — no extra deps
+function sortSemver(versions) {
+  return versions.slice().sort((a, b) => {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      const diff = (pa[i] || 0) - (pb[i] || 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+}
+
+// Fetches available OCP versions for a given channel from the OpenShift upgrade graph API
+function fetchOcpVersionsFromApi(channel) {
+  return new Promise((resolve, reject) => {
+    const url = `https://api.openshift.com/api/upgrades_info/v1/graph?channel=${encodeURIComponent(channel)}`;
+    const req = https.get(url, { timeout: 8000 }, (res) => {
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`API zwróciło status ${res.statusCode}`));
+      }
+      let body = '';
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          // Extract major.minor from channel (e.g. "stable-4.21" → "4.21")
+          // and keep only versions for that minor — the graph includes older
+          // minors as valid upgrade sources which we don't want to show.
+          const minorMatch = channel.match(/(\d+\.\d+)$/);
+          const minor = minorMatch ? minorMatch[1] : null;
+
+          const versions = (parsed.nodes || [])
+            .map(n => n.version)
+            .filter(v => typeof v === 'string' && v.length > 0)
+            .filter(v => !minor || v.startsWith(minor + '.'));
+          resolve(sortSemver(versions));
+        } catch (e) {
+          reject(new Error('Błąd parsowania odpowiedzi API'));
+        }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); reject(new Error('Przekroczono czas oczekiwania na API OpenShift')); });
+    req.on('error', reject);
+  });
+}
+
+// GET /config/ocp-versions?channel=stable-4.18
+router.get('/ocp-versions', requireAuthApi, async (req, res) => {
+  const channel = (req.query.channel || '').trim();
+  const allowed = OCP_CHANNELS.map(c => c.value);
+  if (!allowed.includes(channel)) {
+    return res.status(400).json({ error: `Niedozwolony kanał: ${channel}` });
+  }
+  try {
+    const versions = await fetchOcpVersionsFromApi(channel);
+    return res.json({ channel, versions });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+});
+
 // GET /config
 router.get('/', requireAuth, (req, res) => {
   const projectId = credentialStore.getProjectId(req.session.id);
@@ -49,12 +113,14 @@ router.get('/', requireAuth, (req, res) => {
   const sshKeyDefault     = readFileSafe(path.join(ROOT, 'ssh', 'id_rsa.pub'));
 
   res.render('config', {
-    title:        'Konfiguracja klastra',
+    title:             'Konfiguracja klastra',
     projectId,
-    regions:      GCP_REGIONS,
-    machineTypes: MACHINE_TYPES,
-    networkTypes: NETWORK_TYPES,
-    saved:        req.session.installConfig || {},
+    regions:           GCP_REGIONS,
+    machineTypes:      MACHINE_TYPES,
+    networkTypes:      NETWORK_TYPES,
+    ocpChannels:       OCP_CHANNELS,
+    ocpDefaultChannel: OCP_DEFAULT_CHANNEL,
+    saved:             req.session.installConfig || {},
     pullSecretDefault,
     sshKeyDefault,
   });
@@ -138,6 +204,7 @@ const configSchema = Joi.object({
   serviceCidr: Joi.string().ip({ cidr: 'required' }).default('172.30.0.0/16'),
   machineCidr: Joi.string().ip({ cidr: 'required' }).default('10.0.0.0/16'),
   fips:        Joi.boolean().default(false),
+  ocpVersion:  Joi.string().pattern(/^\d+\.\d+\.\d+(-\S+)?$/).allow('').optional().default(''),
 });
 
 // POST /config  - save config and show YAML preview

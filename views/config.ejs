@@ -139,6 +139,47 @@
       </div>
     </section>
 
+    <!-- Wersja OCP -->
+    <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+      <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
+        <span class="w-6 h-6 bg-slate-700 rounded text-xs font-bold flex items-center justify-center text-slate-300">+</span>
+        Wersja
+      </summary>
+      <div class="px-6 pb-6 border-t border-slate-700 pt-5 space-y-4">
+        <p class="text-xs text-slate-500">
+          Pozostaw domyślnie, aby zainstalować wersję wbudowaną w instalator.
+          Wybór konkretnej wersji ustawia <code class="font-mono text-slate-400">OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE</code>.
+        </p>
+        <div class="grid grid-cols-2 gap-4 items-end">
+          <div>
+            <label class="form-label">Kanał</label>
+            <select id="ocpChannelSelect" class="form-input">
+              <% ocpChannels.forEach(function(ch) { %>
+                <option value="<%= ch.value %>"
+                  <%= (ocpDefaultChannel === ch.value) ? 'selected' : '' %>><%= ch.label %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div>
+            <button type="button" id="fetchVersionsBtn" onclick="fetchOcpVersions()"
+                    class="w-full py-2 px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm transition-colors">
+              Pobierz wersje
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Wersja OCP</label>
+          <select name="ocpVersion" id="ocpVersionSelect" class="form-input">
+            <option value="">domyślna wersja instalatora</option>
+            <% if (saved.ocpVersion) { %>
+              <option value="<%= saved.ocpVersion %>" selected><%= saved.ocpVersion %></option>
+            <% } %>
+          </select>
+          <p id="ocpVersionHint" class="form-hint"></p>
+        </div>
+      </div>
+    </details>
+
     <!-- Advanced -->
     <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
       <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">

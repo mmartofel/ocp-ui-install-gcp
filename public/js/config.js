@@ -189,6 +189,68 @@ document.getElementById('configForm').addEventListener('submit', async (e) => {
   }
 });
 
+async function fetchOcpVersions() {
+  const channelEl = document.getElementById('ocpChannelSelect');
+  const versionEl = document.getElementById('ocpVersionSelect');
+  const hintEl    = document.getElementById('ocpVersionHint');
+  const btn       = document.getElementById('fetchVersionsBtn');
+  const channel   = channelEl.value;
+  if (!channel) return;
+
+  btn.textContent    = 'Pobieranie...';
+  btn.disabled       = true;
+  hintEl.textContent = '';
+  hintEl.className   = 'form-hint';
+
+  try {
+    const resp = await fetch(`/config/ocp-versions?channel=${encodeURIComponent(channel)}`);
+
+    if (resp.status === 401) {
+      hintEl.textContent = 'Sesja wygasła. Zaloguj się ponownie.';
+      hintEl.className   = 'form-hint text-yellow-400';
+      return;
+    }
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      hintEl.textContent = `Błąd: ${data.error || 'Nieznany błąd'}`;
+      hintEl.className   = 'form-hint text-red-400';
+      return;
+    }
+
+    const currentValue = versionEl.value;
+    versionEl.innerHTML = '<option value="">domyślna wersja instalatora</option>';
+
+    if (!data.versions || data.versions.length === 0) {
+      hintEl.textContent = `Brak dostępnych wersji w kanale ${channel}.`;
+      hintEl.className   = 'form-hint text-yellow-400';
+      return;
+    }
+
+    // Display newest first
+    const reversed = data.versions.slice().reverse();
+    reversed.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value       = v;
+      opt.textContent = v;
+      versionEl.appendChild(opt);
+    });
+
+    versionEl.value = (currentValue && data.versions.includes(currentValue))
+      ? currentValue : reversed[0];
+
+    hintEl.textContent = `Załadowano ${data.versions.length} wersji z kanału ${channel}.`;
+    hintEl.className   = 'form-hint text-green-400';
+  } catch (err) {
+    hintEl.textContent = `Błąd: ${err.message}`;
+    hintEl.className   = 'form-hint text-yellow-400';
+  } finally {
+    btn.textContent = 'Pobierz wersje';
+    btn.disabled    = false;
+  }
+}
+
 function showMsg(el, text, type) {
   el.innerHTML = text.replace(/\n/g, '<br>');
   el.className = `p-4 rounded-lg text-sm ${
