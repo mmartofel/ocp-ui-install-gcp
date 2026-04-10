@@ -68,3 +68,8 @@ Must be placed at `data/installer/openshift-install` (or path set via `INSTALLER
 Download from: https://console.redhat.com/openshift/install/gcp/installer-provisioned
 
 The binary requires a Cloud DNS managed zone in the GCP project matching `baseDomain`. The install directory contains `install-config.yaml` which the installer copies and modifies — the original copy is consumed on first run.
+
+### Ask questions
+
+If you have any questions about the code, architecture, or how to extend it, please ask!
+Every time if you are unsure about something, ask for clarification before proceeding.

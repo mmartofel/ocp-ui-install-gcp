@@ -6,4 +6,5 @@ tmp/
 pull-secret.yaml
 pull-secret.json
 pull-secret.txt
+gcp_service_account.json
 
