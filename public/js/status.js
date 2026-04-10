@@ -178,6 +178,48 @@ async function refreshStatus() {
   }
 }
 
+async function reconcileCluster() {
+  const btn   = document.getElementById('reconcileBtn');
+  const icon  = document.getElementById('reconcileIcon');
+  const errEl = document.getElementById('refreshError');
+
+  btn.disabled = true;
+  icon.classList.add('animate-spin');
+  errEl.classList.add('hidden');
+  errEl.className = 'hidden bg-red-950/50 border border-red-800 rounded-xl px-4 py-2.5 text-xs text-red-300';
+
+  try {
+    const resp = await fetch(`/status/reconcile?cluster=${installId}`, { method: 'POST' });
+    if (resp.status === 401) { showSessionExpired(); return; }
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      errEl.textContent = data.error || 'Błąd weryfikacji klastra.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    if (data.healthy || data.already) {
+      window.location.reload();
+      return;
+    }
+
+    const list = data.degradedOperators?.length
+      ? data.degradedOperators.join(', ')
+      : 'nieznane';
+    errEl.textContent = `Klaster nie jest w pełni sprawny. Zdegradowane operatory: ${list}. Poczekaj chwilę i spróbuj ponownie.`;
+    errEl.className = 'bg-yellow-950/50 border border-yellow-700 rounded-xl px-4 py-2.5 text-xs text-yellow-300';
+    errEl.classList.remove('hidden');
+  } catch (err) {
+    errEl.textContent = `Błąd: ${err.message}`;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('animate-spin');
+  }
+}
+
 function copyVal(elementId) {
   const el   = document.getElementById(elementId);
   const text = el.textContent;

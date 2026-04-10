@@ -120,4 +120,61 @@ router.post('/refresh', requireAuthApi, async (req, res) => {
   }
 });
 
+// POST /status/reconcile — live health check; marks install 'complete' if all platform operators healthy
+router.post('/reconcile', requireAuthApi, async (req, res) => {
+  const installId = req.query.cluster || req.session.installId;
+  if (!installId) return res.status(400).json({ error: 'Brak klastra' });
+
+  const install = stateStore.getInstall(installId);
+  if (!install) return res.status(404).json({ error: 'Nie znaleziono klastra' });
+
+  if (install.status === 'complete') {
+    return res.json({ success: true, already: true });
+  }
+
+  const kubeconfigPath = install.install_dir
+    ? path.join(install.install_dir, 'auth', 'kubeconfig')
+    : null;
+
+  if (!kubeconfigPath || !fs.existsSync(kubeconfigPath)) {
+    return res.status(422).json({ error: 'Brak pliku kubeconfig — klaster nie uruchomił się poprawnie.' });
+  }
+
+  try {
+    const status = await clusterStatusPoller.fetchClusterStatus(kubeconfigPath, installId);
+
+    // Persist fresh cluster status snapshot
+    stateStore.upsertClusterStatus({
+      installId,
+      apiUrl:     status.apiUrl,
+      consoleUrl: status.consoleUrl,
+      nodeCount:  status.nodes.length,
+      nodesReady: status.nodes.filter(n => n.ready).length,
+      rawJson:    status,
+    });
+
+    // Health check: platform ClusterOperators only (source === 'platform')
+    const platformOps = status.operators.filter(op => op.source === 'platform');
+    const degradedOps = platformOps.filter(op => op.degraded || !op.available);
+    const healthy = status.nodes.length > 0
+      && status.nodes.every(n => n.ready)
+      && platformOps.length > 0
+      && degradedOps.length === 0;
+
+    if (healthy) {
+      stateStore.setInstallStatus(installId, 'complete', 0);
+    }
+
+    return res.json({
+      success:           true,
+      healthy,
+      degradedOperators: degradedOps.map(op => op.name),
+      nodeCount:         status.nodes.length,
+      nodesReady:        status.nodes.filter(n => n.ready).length,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: `Błąd połączenia z klastrem: ${err.message}` });
+  }
+});
+
 module.exports = router;

@@ -61,8 +61,8 @@ router.post('/:installId', requireAuthApi, (req, res) => {
     return res.status(403).json({ error: 'Brak dostępu do tego klastra.' });
   }
 
-  if (install.status !== 'complete') {
-    return res.status(400).json({ error: 'Klaster nie jest w stanie complete.' });
+  if (install.status !== 'complete' && install.status !== 'failed') {
+    return res.status(400).json({ error: 'Klaster nie jest w stanie umożliwiającym usunięcie.' });
   }
 
   if (install.destroyed_at) {
