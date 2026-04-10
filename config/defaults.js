@@ -51,9 +51,32 @@ const REQUIRED_GCP_ROLES = [
   'roles/deploymentmanager.editor',
 ];
 
+const MARKETPLACE_SKUS = [
+  { value: 'redhat-coreos-oke-413-x86-64-202305021736', label: 'OKE – OpenShift Kubernetes Engine' },
+  { value: 'redhat-coreos-ocp-413-x86-64-202305021736', label: 'OCP – OpenShift Container Platform' },
+  { value: 'redhat-coreos-opp-413-x86-64-202305021736', label: 'OPP – OpenShift Platform Plus' },
+];
+
 const NETWORK_TYPES = [
   { value: 'OVNKubernetes', label: 'OVN-Kubernetes (zalecane)' },
   { value: 'OpenShiftSDN',  label: 'OpenShift SDN (legacy)' },
 ];
 
-module.exports = { GCP_REGIONS, MACHINE_TYPES, INSTALL_STAGES, REQUIRED_GCP_ROLES, NETWORK_TYPES };
+// Dostępne kanały OCP (allowlist — rozszerzyć przy nowych wydaniach)
+const OCP_CHANNELS = [
+  // Stable
+  { value: 'stable-4.21', label: 'stable-4.21' },
+  { value: 'stable-4.20', label: 'stable-4.20' },
+  { value: 'stable-4.19', label: 'stable-4.19' },
+  // EUS (Extended Update Support — tylko parzyste wersje minor)
+  { value: 'eus-4.20', label: 'eus-4.20' },
+  { value: 'eus-4.18', label: 'eus-4.18' },
+  // Candidate (pre-release)
+  { value: 'candidate-4.22', label: 'candidate-4.22 ⚠ pre-release' },
+  { value: 'candidate-4.21', label: 'candidate-4.21 ⚠ pre-release' },
+];
+
+// Kanał domyślny — aktualny stable. Zmień przy kolejnym wydaniu.
+const OCP_DEFAULT_CHANNEL = 'stable-4.21';
+
+module.exports = { GCP_REGIONS, MACHINE_TYPES, INSTALL_STAGES, REQUIRED_GCP_ROLES, NETWORK_TYPES, OCP_CHANNELS, OCP_DEFAULT_CHANNEL, MARKETPLACE_SKUS };

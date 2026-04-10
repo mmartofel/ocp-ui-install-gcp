@@ -1,180 +1,269 @@
 <%- include('_head', { title: 'Konfiguracja klastra', currentPath: '/config' }) %>
 
-<div class="max-w-3xl mx-auto">
+<div>
   <div class="mb-6">
     <h1 class="text-2xl font-bold text-white">Konfiguracja klastra</h1>
     <p class="text-slate-400 text-sm mt-1">Projekt GCP: <span class="text-slate-200 font-mono"><%= projectId %></span></p>
   </div>
 
-  <form id="configForm" class="space-y-6">
+  <form id="configForm">
 
-    <!-- Cluster Identity -->
-    <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
-      <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">1</span>
-        Identyfikacja klastra
-      </h2>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="form-label">Nazwa klastra *</label>
-          <input type="text" name="clusterName" value="<%= saved.clusterName || '' %>"
-                 placeholder="moj-klaster" class="form-input"
-                 required minlength="3" maxlength="20">
-          <p class="form-hint">Tylko litery i cyfry, 3-20 znaków</p>
-        </div>
-        <div>
-          <label class="form-label">Domena bazowa *</label>
-          <div class="flex gap-2">
-            <input type="text" name="baseDomain" id="baseDomain"
-                   value="<%= saved.baseDomain || '' %>" placeholder="example.com"
-                   class="form-input flex-1" required>
-            <button type="button" onclick="checkDns()" id="dnsCheckBtn"
-                    class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-300 transition-colors whitespace-nowrap">
-              Sprawdź DNS
-            </button>
+    <div class="grid grid-cols-5 gap-6 items-start">
+
+      <!-- LEFT COLUMN: main sections 1-5 -->
+      <div class="col-span-3 space-y-6">
+
+        <!-- Cluster Identity -->
+        <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">1</span>
+            Identyfikacja klastra
+          </h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="form-label">Nazwa klastra *</label>
+              <input type="text" name="clusterName" value="<%= saved.clusterName || '' %>"
+                     placeholder="moj-klaster" class="form-input"
+                     required minlength="3" maxlength="20">
+              <p class="form-hint">Tylko litery i cyfry, 3-20 znaków</p>
+            </div>
+            <div>
+              <label class="form-label">Domena bazowa *</label>
+              <div class="flex gap-2">
+                <input type="text" name="baseDomain" id="baseDomain"
+                       value="<%= saved.baseDomain || '' %>" placeholder="example.com"
+                       class="form-input flex-1" required>
+                <button type="button" onclick="checkDns()" id="dnsCheckBtn"
+                        class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-300 transition-colors whitespace-nowrap">
+                  Sprawdź DNS
+                </button>
+              </div>
+              <p id="dnsStatus" class="form-hint"></p>
+              <p class="form-hint">Musi istnieć strefa DNS w Cloud DNS projektu GCP</p>
+            </div>
           </div>
-          <p id="dnsStatus" class="form-hint"></p>
-          <p class="form-hint">Musi istnieć strefa DNS w Cloud DNS projektu GCP</p>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <!-- GCP Configuration -->
-    <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
-      <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">2</span>
-        Konfiguracja GCP
-      </h2>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="form-label">ID projektu GCP *</label>
-          <input type="text" name="gcpProject"
-                 value="<%= saved.gcpProject || projectId %>"
-                 placeholder="np. openenv-4mpz8"
-                 class="form-input font-mono" required>
-          <p class="form-hint">Projekt docelowy instalacji (może różnić się od projektu konta serwisowego)</p>
-        </div>
-        <div>
-          <label class="form-label">Region GCP *</label>
-          <select name="region" class="form-input" required>
-            <option value="">Wybierz region...</option>
-            <% regions.forEach(function(r) { %>
-              <option value="<%= r.value %>" <%= (saved.region === r.value) ? 'selected' : '' %>><%= r.label %></option>
-            <% }); %>
-          </select>
-        </div>
-      </div>
-    </section>
-
-    <!-- Control Plane -->
-    <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
-      <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">3</span>
-        Węzły Control Plane
-      </h2>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="form-label">Typ maszyny *</label>
-          <select name="masterType" class="form-input" required>
-            <% machineTypes.forEach(function(m) { %>
-              <option value="<%= m.value %>" <%= ((saved.masterType || 'n2-standard-4') === m.value) ? 'selected' : '' %>><%= m.label %></option>
-            <% }); %>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Liczba węzłów</label>
-          <input type="text" value="3 (wymagane dla HA)" class="form-input bg-slate-800 text-slate-500 cursor-not-allowed" disabled>
-          <p class="form-hint">Zawsze 3 dla wysokiej dostępności</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Worker Nodes -->
-    <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
-      <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">4</span>
-        Węzły robocze (Worker)
-      </h2>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="form-label">Typ maszyny *</label>
-          <select name="workerType" class="form-input" required>
-            <% machineTypes.forEach(function(m) { %>
-              <option value="<%= m.value %>" <%= ((saved.workerType || 'n2-standard-4') === m.value) ? 'selected' : '' %>><%= m.label %></option>
-            <% }); %>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Liczba węzłów *</label>
-          <input type="number" name="workerCount" value="<%= saved.workerCount || 3 %>"
-                 min="2" max="20" class="form-input" required>
-          <p class="form-hint">Minimum 2</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Credentials -->
-    <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
-      <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">5</span>
-        Dane dostępowe OpenShift
-      </h2>
-      <div class="space-y-4">
-        <div>
-          <label class="form-label">
-            Pull Secret *
-            <a href="https://console.redhat.com/openshift/install/pull-secret" target="_blank"
-               class="text-xs text-rh-red hover:text-red-400 ml-2">Pobierz z Red Hat →</a>
-          </label>
-          <textarea name="pullSecret" rows="4" required
-                    placeholder='{"auths":{"cloud.openshift.com":{"auth":"...","email":"..."}},...}'
-                    class="form-input font-mono text-xs resize-y"><%= saved.pullSecret || pullSecretDefault || '' %></textarea>
-        </div>
-        <div>
-          <label class="form-label">Klucz publiczny SSH *</label>
-          <textarea name="sshKey" rows="3" required
-                    placeholder="ssh-rsa AAAA... user@host"
-                    class="form-input font-mono text-xs resize-y"><%= saved.sshKey || sshKeyDefault || '' %></textarea>
-        </div>
-      </div>
-    </section>
-
-    <!-- Advanced -->
-    <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
-      <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
-        <span class="w-6 h-6 bg-slate-700 rounded text-xs font-bold flex items-center justify-center text-slate-300">+</span>
-        Ustawienia zaawansowane
-      </summary>
-      <div class="px-6 pb-6 border-t border-slate-700 pt-5 space-y-4">
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="form-label">Typ sieci</label>
-            <select name="networkType" class="form-input">
-              <% networkTypes.forEach(function(n) { %>
-                <option value="<%= n.value %>" <%= ((saved.networkType || 'OVNKubernetes') === n.value) ? 'selected' : '' %>><%= n.label %></option>
-              <% }); %>
-            </select>
+        <!-- GCP Configuration -->
+        <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">2</span>
+            Konfiguracja GCP
+          </h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="form-label">ID projektu GCP *</label>
+              <input type="text" name="gcpProject"
+                     value="<%= saved.gcpProject || projectId %>"
+                     placeholder="np. openenv-4mpz8"
+                     class="form-input font-mono" required>
+              <p class="form-hint">Projekt docelowy instalacji (może różnić się od projektu konta serwisowego)</p>
+            </div>
+            <div>
+              <label class="form-label">Region GCP *</label>
+              <select name="region" class="form-input" required>
+                <option value="">Wybierz region...</option>
+                <% regions.forEach(function(r) { %>
+                  <option value="<%= r.value %>" <%= (saved.region === r.value) ? 'selected' : '' %>><%= r.label %></option>
+                <% }); %>
+              </select>
+            </div>
           </div>
-          <div>
-            <label class="form-label">Pod CIDR</label>
-            <input type="text" name="podCidr" value="<%= saved.podCidr || '10.128.0.0/14' %>" class="form-input font-mono text-sm">
-          </div>
-          <div>
-            <label class="form-label">Service CIDR</label>
-            <input type="text" name="serviceCidr" value="<%= saved.serviceCidr || '172.30.0.0/16' %>" class="form-input font-mono text-sm">
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <input type="checkbox" name="fips" id="fips" value="true" <%= saved.fips ? 'checked' : '' %>
-                 class="w-4 h-4 accent-rh-red">
-          <label for="fips" class="text-sm text-slate-400 cursor-pointer">Tryb FIPS</label>
-        </div>
-      </div>
-    </details>
+        </section>
 
-    <div id="configMsg" class="hidden"></div>
+        <!-- Control Plane -->
+        <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">3</span>
+            Węzły Control Plane
+          </h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="form-label">Typ maszyny *</label>
+              <select name="masterType" class="form-input" required>
+                <% machineTypes.forEach(function(m) { %>
+                  <option value="<%= m.value %>" <%= ((saved.masterType || 'n2-standard-4') === m.value) ? 'selected' : '' %>><%= m.label %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Liczba węzłów</label>
+              <input type="text" value="3 (wymagane dla HA)" class="form-input bg-slate-800 text-slate-500 cursor-not-allowed" disabled>
+              <p class="form-hint">Zawsze 3 dla wysokiej dostępności</p>
+            </div>
+          </div>
+        </section>
 
-    <div id="yamlPreviewSection" class="hidden bg-slate-900 border border-green-700 rounded-xl overflow-hidden">
+        <!-- Worker Nodes -->
+        <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">4</span>
+            Węzły robocze (Worker)
+          </h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="form-label">Typ maszyny *</label>
+              <select name="workerType" class="form-input" required>
+                <% machineTypes.forEach(function(m) { %>
+                  <option value="<%= m.value %>" <%= ((saved.workerType || 'n2-standard-4') === m.value) ? 'selected' : '' %>><%= m.label %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Liczba węzłów *</label>
+              <input type="number" name="workerCount" value="<%= saved.workerCount || 3 %>"
+                     min="2" max="20" class="form-input" required>
+              <p class="form-hint">Minimum 2</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Credentials -->
+        <section class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+          <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-rh-red rounded text-xs font-bold flex items-center justify-center">5</span>
+            Dane dostępowe OpenShift
+          </h2>
+          <div class="space-y-4">
+            <div>
+              <label class="form-label">
+                Pull Secret *
+                <a href="https://console.redhat.com/openshift/install/pull-secret" target="_blank"
+                   class="text-xs text-rh-red hover:text-red-400 ml-2">Pobierz z Red Hat →</a>
+              </label>
+              <textarea name="pullSecret" rows="4" required
+                        placeholder='{"auths":{"cloud.openshift.com":{"auth":"...","email":"..."}},...}'
+                        class="form-input font-mono text-xs resize-y"><%= saved.pullSecret || pullSecretDefault || '' %></textarea>
+            </div>
+            <div>
+              <label class="form-label">Klucz publiczny SSH *</label>
+              <textarea name="sshKey" rows="3" required
+                        placeholder="ssh-rsa AAAA... user@host"
+                        class="form-input font-mono text-xs resize-y"><%= saved.sshKey || sshKeyDefault || '' %></textarea>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /LEFT COLUMN -->
+
+      <!-- RIGHT COLUMN: collapsibles -->
+      <div class="col-span-2 space-y-4 sticky top-6">
+
+        <!-- Subskrypcja / Offer Type -->
+        <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden" <%= (saved.offerType === 'marketplace') ? 'open' : '' %>>
+          <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
+            <span class="w-6 h-6 bg-slate-700 rounded text-xs font-bold flex items-center justify-center text-slate-300">+</span>
+            Subskrypcja
+          </summary>
+          <div class="px-6 pb-6 border-t border-slate-700 pt-5 space-y-4">
+            <div class="space-y-2">
+              <label class="form-label">Typ oferty</label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="radio" name="offerType" value="bring-your-own-subscription"
+                  <%= (saved.offerType !== 'marketplace') ? 'checked' : '' %>
+                  class="accent-indigo-500">
+                <span class="text-sm text-slate-300">Bring Your Own Subscription</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="radio" name="offerType" value="marketplace"
+                  <%= (saved.offerType === 'marketplace') ? 'checked' : '' %>
+                  class="accent-indigo-500">
+                <span class="text-sm text-slate-300">Marketplace</span>
+              </label>
+            </div>
+            <div id="skuSection" style="display:none">
+              <label class="form-label">OpenShift SKU</label>
+              <select name="ocpSku" id="ocpSku" class="form-input">
+                <option value="" disabled selected>— wybierz SKU —</option>
+                <% marketplaceSkus.forEach(sku => { %>
+                  <option value="<%= sku.value %>" <%= (saved.ocpSku === sku.value) ? 'selected' : '' %>><%= sku.label %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- Wersja OCP -->
+        <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+          <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
+            <span class="w-6 h-6 bg-slate-700 rounded text-xs font-bold flex items-center justify-center text-slate-300">+</span>
+            Wersja
+          </summary>
+          <div class="px-6 pb-6 border-t border-slate-700 pt-5 space-y-4">
+            <p class="text-xs text-slate-500">
+              Pozostaw domyślnie, aby zainstalować wersję wbudowaną w instalator.
+              Wybór konkretnej wersji ustawia <code class="font-mono text-slate-400">OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE</code>.
+            </p>
+            <div class="grid grid-cols-2 gap-4 items-end">
+              <div>
+                <label class="form-label">Kanał</label>
+                <select id="ocpChannelSelect" class="form-input">
+                  <% ocpChannels.forEach(function(ch) { %>
+                    <option value="<%= ch.value %>"
+                      <%= (ocpDefaultChannel === ch.value) ? 'selected' : '' %>><%= ch.label %></option>
+                  <% }); %>
+                </select>
+              </div>
+              <div>
+                <button type="button" id="fetchVersionsBtn" onclick="fetchOcpVersions()"
+                        class="w-full py-2 px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm transition-colors">
+                  Pobierz wersje
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Wersja OCP</label>
+              <select name="ocpVersion" id="ocpVersionSelect" class="form-input">
+                <option value="">domyślna wersja instalatora</option>
+                <% if (saved.ocpVersion) { %>
+                  <option value="<%= saved.ocpVersion %>" selected><%= saved.ocpVersion %></option>
+                <% } %>
+              </select>
+              <p id="ocpVersionHint" class="form-hint"></p>
+            </div>
+          </div>
+        </details>
+
+        <!-- Advanced -->
+        <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+          <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
+            <span class="w-6 h-6 bg-slate-700 rounded text-xs font-bold flex items-center justify-center text-slate-300">+</span>
+            Ustawienia zaawansowane
+          </summary>
+          <div class="px-6 pb-6 border-t border-slate-700 pt-5 space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="form-label">Typ sieci</label>
+                <select name="networkType" class="form-input">
+                  <% networkTypes.forEach(function(n) { %>
+                    <option value="<%= n.value %>" <%= ((saved.networkType || 'OVNKubernetes') === n.value) ? 'selected' : '' %>><%= n.label %></option>
+                  <% }); %>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">Pod CIDR</label>
+                <input type="text" name="podCidr" value="<%= saved.podCidr || '10.128.0.0/14' %>" class="form-input font-mono text-sm">
+              </div>
+              <div>
+                <label class="form-label">Service CIDR</label>
+                <input type="text" name="serviceCidr" value="<%= saved.serviceCidr || '172.30.0.0/16' %>" class="form-input font-mono text-sm">
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="checkbox" name="fips" id="fips" value="true" <%= saved.fips ? 'checked' : '' %>
+                     class="w-4 h-4 accent-rh-red">
+              <label for="fips" class="text-sm text-slate-400 cursor-pointer">Tryb FIPS</label>
+            </div>
+          </div>
+        </details>
+
+      </div><!-- /RIGHT COLUMN -->
+
+    </div><!-- /grid -->
+
+    <div id="configMsg" class="hidden mt-6"></div>
+
+    <div id="yamlPreviewSection" class="hidden bg-slate-900 border border-green-700 rounded-xl overflow-hidden mt-6">
       <div class="flex items-center justify-between px-5 py-3 border-b border-slate-700">
         <span class="text-sm font-medium text-green-300">Podgląd install-config.yaml</span>
         <button type="button" onclick="document.getElementById('yamlPreviewSection').classList.add('hidden')"
@@ -183,7 +272,7 @@
       <pre id="yamlPreview" class="p-5 text-xs font-mono text-slate-300 overflow-x-auto max-h-64 overflow-y-auto"></pre>
     </div>
 
-    <div class="flex gap-3">
+    <div class="flex gap-3 mt-6">
       <button type="button" onclick="previewConfig()"
               class="flex-1 py-2.5 px-4 border border-slate-600 hover:border-slate-400 text-slate-300 rounded-lg text-sm transition-colors">
         Podgląd YAML

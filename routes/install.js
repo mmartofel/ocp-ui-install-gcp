@@ -104,7 +104,7 @@ router.post('/start', requireAuth, requireConfig, (req, res) => {
   // Start the process
   const io = req.app.get('io');
   installerProcess.start(
-    { installId, installDir, installerPath: INSTALLER_PATH, credentials },
+    { installId, installDir, installerPath: INSTALLER_PATH, credentials, ocpVersion: config.ocpVersion || '' },
     io
   );
 
