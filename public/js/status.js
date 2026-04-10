@@ -41,11 +41,10 @@ async function loadStatus() {
     const status  = data.clusterStatus;
 
     if (!install || install.status !== 'complete') {
-      const msg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">
-        Instalacja nie powiodła się — klaster niedostępny.
-      </td></tr>`;
-      document.getElementById('nodesBody').innerHTML = msg;
-      document.getElementById('operatorsBody').innerHTML = msg;
+      const nodesMsg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">Instalacja nie powiodła się — klaster niedostępny.</td></tr>`;
+      const opsMsg   = `<tr><td colspan="5" class="px-5 py-4 text-slate-500 text-center text-xs">Instalacja nie powiodła się — klaster niedostępny.</td></tr>`;
+      document.getElementById('nodesBody').innerHTML = nodesMsg;
+      document.getElementById('operatorsBody').innerHTML = opsMsg;
       document.getElementById('nodesReady').textContent = 'Niedostępny';
       document.getElementById('nodesReady').className = 'text-xs text-red-400';
       document.getElementById('operatorsReady').textContent = '';
@@ -53,11 +52,10 @@ async function loadStatus() {
     }
 
     if (!data.kubeconfigExists) {
-      const msg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">
-        Kubeconfig niedostępny — sprawdź katalog instalacji.
-      </td></tr>`;
-      document.getElementById('nodesBody').innerHTML = msg;
-      document.getElementById('operatorsBody').innerHTML = msg;
+      const nodesMsg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">Kubeconfig niedostępny — sprawdź katalog instalacji.</td></tr>`;
+      const opsMsg   = `<tr><td colspan="5" class="px-5 py-4 text-slate-500 text-center text-xs">Kubeconfig niedostępny — sprawdź katalog instalacji.</td></tr>`;
+      document.getElementById('nodesBody').innerHTML = nodesMsg;
+      document.getElementById('operatorsBody').innerHTML = opsMsg;
       document.getElementById('nodesReady').textContent = 'Brak kubeconfig';
       document.getElementById('nodesReady').className = 'text-xs text-yellow-400';
       document.getElementById('operatorsReady').textContent = '';
@@ -65,11 +63,10 @@ async function loadStatus() {
     }
 
     if (!status) {
-      const msg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">
-        Brak danych — kliknij "Odśwież" aby załadować status klastra.
-      </td></tr>`;
-      document.getElementById('nodesBody').innerHTML = msg;
-      document.getElementById('operatorsBody').innerHTML = msg;
+      const nodesMsg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">Brak danych — kliknij "Odśwież" aby załadować status klastra.</td></tr>`;
+      const opsMsg   = `<tr><td colspan="5" class="px-5 py-4 text-slate-500 text-center text-xs">Brak danych — kliknij "Odśwież" aby załadować status klastra.</td></tr>`;
+      document.getElementById('nodesBody').innerHTML = nodesMsg;
+      document.getElementById('operatorsBody').innerHTML = opsMsg;
       document.getElementById('nodesReady').textContent = 'Ładowanie...';
       document.getElementById('nodesReady').className = 'text-xs text-slate-500';
       document.getElementById('operatorsReady').textContent = '';
@@ -77,7 +74,7 @@ async function loadStatus() {
     }
 
     if (status.nodes) renderNodes(status.nodes);
-    if (status.operators) renderOperators(status.operators);
+    if (status.operators) renderOperators(status.operators, status.operatorErrors);
 
   } catch (err) {
     console.error('Status load error:', err);
@@ -119,7 +116,7 @@ function renderNodes(nodes) {
   `).join('');
 }
 
-function renderOperators(operators) {
+function renderOperators(operators, operatorErrors) {
   const tbody   = document.getElementById('operatorsBody');
   const readyEl = document.getElementById('operatorsReady');
 
@@ -128,13 +125,22 @@ function renderOperators(operators) {
   readyEl.className   = availCount === operators.length ? 'text-xs text-green-400' : 'text-xs text-yellow-400';
 
   if (!operators.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="px-5 py-4 text-slate-600 text-center text-xs">Brak danych operatorów.</td></tr>`;
+    const errMsg = operatorErrors && operatorErrors.length
+      ? `Błąd pobierania operatorów: ${operatorErrors.join('; ')}`
+      : 'Brak danych operatorów.';
+    tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-4 text-slate-600 text-center text-xs">${errMsg}</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = operators.map(op => `
+  tbody.innerHTML = operators.map(op => {
+    const isOlm = op.source === 'olm';
+    const typeBadge = isOlm
+      ? `<span class="px-1.5 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400 font-mono">OLM</span>`
+      : `<span class="px-1.5 py-0.5 rounded text-xs bg-slate-800 text-slate-400 font-mono">Platform</span>`;
+    return `
     <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
       <td class="px-5 py-3 font-mono text-xs text-slate-200">${op.name}</td>
+      <td class="px-5 py-3">${typeBadge}</td>
       <td class="px-5 py-3 text-xs ${op.available ? 'text-green-400' : 'text-red-400'}">
         ${op.available ? '✓ Tak' : '✗ Nie'}
       </td>
@@ -142,8 +148,8 @@ function renderOperators(operators) {
         ${op.degraded ? '✗ Tak' : '–'}
       </td>
       <td class="px-5 py-3 font-mono text-xs text-slate-500">${op.version || '-'}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function refreshStatus() {
