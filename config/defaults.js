@@ -51,6 +51,12 @@ const REQUIRED_GCP_ROLES = [
   'roles/deploymentmanager.editor',
 ];
 
+const MARKETPLACE_SKUS = [
+  { value: 'redhat-coreos-oke-413-x86-64-202305021736', label: 'OKE – OpenShift Kubernetes Engine' },
+  { value: 'redhat-coreos-ocp-413-x86-64-202305021736', label: 'OCP – OpenShift Container Platform' },
+  { value: 'redhat-coreos-opp-413-x86-64-202305021736', label: 'OPP – OpenShift Platform Plus' },
+];
+
 const NETWORK_TYPES = [
   { value: 'OVNKubernetes', label: 'OVN-Kubernetes (zalecane)' },
   { value: 'OpenShiftSDN',  label: 'OpenShift SDN (legacy)' },
@@ -73,4 +79,4 @@ const OCP_CHANNELS = [
 // Kanał domyślny — aktualny stable. Zmień przy kolejnym wydaniu.
 const OCP_DEFAULT_CHANNEL = 'stable-4.21';
 
-module.exports = { GCP_REGIONS, MACHINE_TYPES, INSTALL_STAGES, REQUIRED_GCP_ROLES, NETWORK_TYPES, OCP_CHANNELS, OCP_DEFAULT_CHANNEL };
+module.exports = { GCP_REGIONS, MACHINE_TYPES, INSTALL_STAGES, REQUIRED_GCP_ROLES, NETWORK_TYPES, OCP_CHANNELS, OCP_DEFAULT_CHANNEL, MARKETPLACE_SKUS };

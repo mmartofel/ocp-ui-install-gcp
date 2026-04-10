@@ -12,7 +12,7 @@ const { exec } = require('child_process');
 const credentialStore     = require('../lib/credentialStore');
 const gcpValidator        = require('../lib/gcpValidator');
 const installConfigBuilder= require('../lib/installConfigBuilder');
-const { GCP_REGIONS, MACHINE_TYPES, NETWORK_TYPES, OCP_CHANNELS, OCP_DEFAULT_CHANNEL } = require('../config/defaults');
+const { GCP_REGIONS, MACHINE_TYPES, NETWORK_TYPES, OCP_CHANNELS, OCP_DEFAULT_CHANNEL, MARKETPLACE_SKUS } = require('../config/defaults');
 
 function requireAuth(req, res, next) {
   if (!credentialStore.has(req.session.id)) {
@@ -120,6 +120,7 @@ router.get('/', requireAuth, (req, res) => {
     networkTypes:      NETWORK_TYPES,
     ocpChannels:       OCP_CHANNELS,
     ocpDefaultChannel: OCP_DEFAULT_CHANNEL,
+    marketplaceSkus:   MARKETPLACE_SKUS,
     saved:             req.session.installConfig || {},
     pullSecretDefault,
     sshKeyDefault,
@@ -205,6 +206,8 @@ const configSchema = Joi.object({
   machineCidr: Joi.string().ip({ cidr: 'required' }).default('10.0.0.0/16'),
   fips:        Joi.boolean().default(false),
   ocpVersion:  Joi.string().pattern(/^\d+\.\d+\.\d+(-\S+)?$/).allow('').optional().default(''),
+  offerType:   Joi.string().valid('bring-your-own-subscription', 'marketplace').default('bring-your-own-subscription'),
+  ocpSku:      Joi.string().allow('').optional().default(''),
 });
 
 // POST /config  - save config and show YAML preview

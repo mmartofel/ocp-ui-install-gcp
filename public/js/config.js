@@ -261,3 +261,20 @@ function showMsg(el, text, type) {
   el.classList.remove('hidden');
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+// Show/hide marketplace SKU section based on offer type selection
+(function initOfferTypeToggle() {
+  const skuSection = document.getElementById('skuSection');
+  if (!skuSection) return;
+
+  function syncSkuVisibility() {
+    const checked = document.querySelector('input[name="offerType"]:checked');
+    skuSection.style.display = (checked && checked.value === 'marketplace') ? 'block' : 'none';
+  }
+
+  document.querySelectorAll('input[name="offerType"]').forEach(radio => {
+    radio.addEventListener('change', syncSkuVisibility);
+  });
+
+  syncSkuVisibility();
+}());

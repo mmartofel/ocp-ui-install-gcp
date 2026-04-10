@@ -149,6 +149,40 @@
       <!-- RIGHT COLUMN: collapsibles -->
       <div class="col-span-2 space-y-4 sticky top-6">
 
+        <!-- Subskrypcja / Offer Type -->
+        <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden" <%= (saved.offerType === 'marketplace') ? 'open' : '' %>>
+          <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
+            <span class="w-6 h-6 bg-slate-700 rounded text-xs font-bold flex items-center justify-center text-slate-300">+</span>
+            Subskrypcja
+          </summary>
+          <div class="px-6 pb-6 border-t border-slate-700 pt-5 space-y-4">
+            <div class="space-y-2">
+              <label class="form-label">Typ oferty</label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="radio" name="offerType" value="bring-your-own-subscription"
+                  <%= (saved.offerType !== 'marketplace') ? 'checked' : '' %>
+                  class="accent-indigo-500">
+                <span class="text-sm text-slate-300">Bring Your Own Subscription</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="radio" name="offerType" value="marketplace"
+                  <%= (saved.offerType === 'marketplace') ? 'checked' : '' %>
+                  class="accent-indigo-500">
+                <span class="text-sm text-slate-300">Marketplace</span>
+              </label>
+            </div>
+            <div id="skuSection" style="display:none">
+              <label class="form-label">OpenShift SKU</label>
+              <select name="ocpSku" id="ocpSku" class="form-input">
+                <option value="" disabled selected>— wybierz SKU —</option>
+                <% marketplaceSkus.forEach(sku => { %>
+                  <option value="<%= sku.value %>" <%= (saved.ocpSku === sku.value) ? 'selected' : '' %>><%= sku.label %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+        </details>
+
         <!-- Wersja OCP -->
         <details class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
           <summary class="px-6 py-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none flex items-center gap-2">
