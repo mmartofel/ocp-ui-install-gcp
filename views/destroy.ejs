@@ -20,6 +20,20 @@
     </div>
   </div>
 
+  <!-- Result banner (shown after complete or failed) -->
+  <div id="resultBanner" class="hidden rounded-xl px-5 py-4 border">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p id="resultTitle" class="text-sm font-semibold"></p>
+        <p id="resultDetail" class="text-xs mt-1 opacity-75"></p>
+      </div>
+      <a href="/status"
+         class="px-4 py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 text-slate-200 rounded-lg transition-colors whitespace-nowrap flex-shrink-0">
+        Przejdź do Status →
+      </a>
+    </div>
+  </div>
+
   <!-- Terminal log viewer -->
   <div class="bg-slate-950 border border-slate-700 rounded-xl overflow-hidden">
     <div class="flex items-center gap-3 px-4 py-2.5 bg-slate-900 border-b border-slate-700">

@@ -19,7 +19,7 @@ socket.on('destroy:complete', () => {
   applyStatus('complete');
   appendSystemLine('✓ Klaster został pomyślnie usunięty.');
   document.getElementById('logCursor').classList.add('hidden');
-  setTimeout(() => { window.location.href = '/status'; }, 3000);
+  showResult('complete');
 });
 
 socket.on('destroy:failed', ({ exitCode, error }) => {
@@ -29,6 +29,7 @@ socket.on('destroy:failed', ({ exitCode, error }) => {
     'error'
   );
   document.getElementById('logCursor').classList.add('hidden');
+  showResult('failed', exitCode);
 });
 
 // ── Log rendering ─────────────────────────────────────────────────────────────
@@ -94,6 +95,28 @@ function escapeHtml(str) {
 
 function scrollToBottom() {
   logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+function showResult(status, exitCode) {
+  const banner = document.getElementById('resultBanner');
+  const title  = document.getElementById('resultTitle');
+  const detail = document.getElementById('resultDetail');
+
+  if (status === 'complete') {
+    banner.className   = 'rounded-xl px-5 py-4 border bg-green-950/50 border-green-800';
+    title.className    = 'text-sm font-semibold text-green-300';
+    title.textContent  = '✓ Klaster usunięty pomyślnie';
+    detail.className   = 'text-xs mt-1 text-green-400/70';
+    detail.textContent = 'Wszystkie zasoby GCP zostały usunięte. Klaster przeniesiony do historii.';
+  } else {
+    banner.className   = 'rounded-xl px-5 py-4 border bg-red-950/50 border-red-800';
+    title.className    = 'text-sm font-semibold text-red-300';
+    title.textContent  = `✗ Błąd usuwania klastra (kod: ${exitCode ?? 'N/A'})`;
+    detail.className   = 'text-xs mt-1 text-red-400/70';
+    detail.textContent = 'Część zasobów GCP może wymagać ręcznego usunięcia. Sprawdź logi powyżej.';
+  }
+
+  banner.classList.remove('hidden');
 }
 
 function applyStatus(status) {
