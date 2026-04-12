@@ -41,7 +41,7 @@ async function loadStatus() {
     const status  = data.clusterStatus;
 
     if (!install || install.status !== 'complete') {
-      const nodesMsg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">Instalacja nie powiodła się — klaster niedostępny.</td></tr>`;
+      const nodesMsg = `<tr><td colspan="6" class="px-5 py-4 text-slate-500 text-center text-xs">Instalacja nie powiodła się — klaster niedostępny.</td></tr>`;
       const opsMsg   = `<tr><td colspan="5" class="px-5 py-4 text-slate-500 text-center text-xs">Instalacja nie powiodła się — klaster niedostępny.</td></tr>`;
       document.getElementById('nodesBody').innerHTML = nodesMsg;
       document.getElementById('operatorsBody').innerHTML = opsMsg;
@@ -52,7 +52,7 @@ async function loadStatus() {
     }
 
     if (!data.kubeconfigExists) {
-      const nodesMsg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">Kubeconfig niedostępny — sprawdź katalog instalacji.</td></tr>`;
+      const nodesMsg = `<tr><td colspan="6" class="px-5 py-4 text-slate-500 text-center text-xs">Kubeconfig niedostępny — sprawdź katalog instalacji.</td></tr>`;
       const opsMsg   = `<tr><td colspan="5" class="px-5 py-4 text-slate-500 text-center text-xs">Kubeconfig niedostępny — sprawdź katalog instalacji.</td></tr>`;
       document.getElementById('nodesBody').innerHTML = nodesMsg;
       document.getElementById('operatorsBody').innerHTML = opsMsg;
@@ -63,7 +63,7 @@ async function loadStatus() {
     }
 
     if (!status) {
-      const nodesMsg = `<tr><td colspan="4" class="px-5 py-4 text-slate-500 text-center text-xs">Brak danych — kliknij "Odśwież" aby załadować status klastra.</td></tr>`;
+      const nodesMsg = `<tr><td colspan="6" class="px-5 py-4 text-slate-500 text-center text-xs">Brak danych — kliknij "Odśwież" aby załadować status klastra.</td></tr>`;
       const opsMsg   = `<tr><td colspan="5" class="px-5 py-4 text-slate-500 text-center text-xs">Brak danych — kliknij "Odśwież" aby załadować status klastra.</td></tr>`;
       document.getElementById('nodesBody').innerHTML = nodesMsg;
       document.getElementById('operatorsBody').innerHTML = opsMsg;
@@ -72,6 +72,9 @@ async function loadStatus() {
       document.getElementById('operatorsReady').textContent = '';
       return;
     }
+
+    if (status.ocpVersion) document.getElementById('ocpVersion').textContent = status.ocpVersion;
+    if (status.infraProvider) document.getElementById('infraProvider').textContent = status.infraProvider;
 
     if (status.nodes) renderNodes(status.nodes);
     if (status.operators) renderOperators(status.operators, status.operatorErrors);
@@ -95,7 +98,7 @@ function renderNodes(nodes) {
   readyEl.className   = readyCount === nodes.length ? 'text-xs text-green-400' : 'text-xs text-yellow-400';
 
   if (!nodes.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="px-5 py-4 text-slate-600 text-center text-xs">Brak danych węzłów.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-4 text-slate-600 text-center text-xs">Brak danych węzłów.</td></tr>`;
     return;
   }
 
@@ -111,6 +114,8 @@ function renderNodes(nodes) {
           ${n.ready ? 'Ready' : 'NotReady'}
         </span>
       </td>
+      <td class="px-5 py-3 font-mono text-xs text-slate-400">${n.instanceType || '-'}</td>
+      <td class="px-5 py-3 font-mono text-xs text-slate-400">${n.zone || '-'}</td>
       <td class="px-5 py-3 font-mono text-xs text-slate-500">${n.version || '-'}</td>
     </tr>
   `).join('');
@@ -128,7 +133,7 @@ function renderOperators(operators, operatorErrors) {
     const errMsg = operatorErrors && operatorErrors.length
       ? `Błąd pobierania operatorów: ${operatorErrors.join('; ')}`
       : 'Brak danych operatorów.';
-    tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-4 text-slate-600 text-center text-xs">${errMsg}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-4 text-slate-600 text-center text-xs">${errMsg}</td></tr>`;
     return;
   }
 
@@ -137,15 +142,19 @@ function renderOperators(operators, operatorErrors) {
     const typeBadge = isOlm
       ? `<span class="px-1.5 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400 font-mono">OLM</span>`
       : `<span class="px-1.5 py-0.5 rounded text-xs bg-slate-800 text-slate-400 font-mono">Platform</span>`;
+    const namespaceTd = op.namespace
+      ? `<td class="px-5 py-3 font-mono text-xs text-slate-400">${op.namespace}</td>`
+      : `<td class="px-5 py-3 text-xs text-slate-600 italic">cluster-scoped</td>`;
     return `
     <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
       <td class="px-5 py-3 font-mono text-xs text-slate-200">${op.name}</td>
+      ${namespaceTd}
       <td class="px-5 py-3">${typeBadge}</td>
       <td class="px-5 py-3 text-xs ${op.available ? 'text-green-400' : 'text-red-400'}">
         ${op.available ? '✓ Tak' : '✗ Nie'}
       </td>
-      <td class="px-5 py-3 text-xs ${op.degraded ? 'text-red-400' : 'text-slate-500'}">
-        ${op.degraded ? '✗ Tak' : '–'}
+      <td class="px-5 py-3 text-xs ${op.degraded ? 'text-red-400' : 'text-green-400'}">
+        ${op.degraded ? '✗ Tak' : '✓ Nie'}
       </td>
       <td class="px-5 py-3 font-mono text-xs text-slate-500">${op.version || '-'}</td>
     </tr>`;
