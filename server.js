@@ -132,6 +132,7 @@ async function main() {
   app.use('/install',              require('./routes/install'));
   app.use('/status',               require('./routes/status'));
   app.use('/destroy',              require('./routes/destroy'));
+  app.use('/ai',                   require('./routes/ai'));
   app.use('/download',             require('./routes/download'));
 
   // ── 8. Socket.io ──────────────────────────────────────────────────────────────

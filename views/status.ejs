@@ -63,11 +63,29 @@
                 <% } %>
               </td>
               <td class="px-5 py-3 text-right">
-                <button
-                  onclick="openDestroyModal('<%= cl.install_id %>', '<%= cl.cluster_name %>.<%= cl.base_domain %>')"
-                  class="px-2.5 py-1 text-xs border border-red-900 hover:border-rh-red text-red-500 hover:text-red-400 rounded transition-colors">
-                  Usuń klaster
-                </button>
+                <div class="flex items-center justify-end gap-2">
+                  <% if (cl.status === 'complete') { %>
+                    <% if (cl.ai_enabled_at) { %>
+                      <span class="flex items-center gap-1 px-2.5 py-1 text-xs border border-purple-800 text-purple-400 rounded bg-purple-950/30" title="Operatory AI zainstalowane">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+                        </svg>
+                        AI Ready
+                      </span>
+                    <% } else { %>
+                      <button
+                        onclick="openAiModal('<%= cl.install_id %>', '<%= cl.cluster_name %>.<%= cl.base_domain %>')"
+                        class="px-2.5 py-1 text-xs border border-purple-800 hover:border-purple-600 text-purple-400 hover:text-purple-300 rounded transition-colors">
+                        Przygotuj dla AI
+                      </button>
+                    <% } %>
+                  <% } %>
+                  <button
+                    onclick="openDestroyModal('<%= cl.install_id %>', '<%= cl.cluster_name %>.<%= cl.base_domain %>')"
+                    class="px-2.5 py-1 text-xs border border-red-900 hover:border-rh-red text-red-500 hover:text-red-400 rounded transition-colors">
+                    Usuń klaster
+                  </button>
+                </div>
               </td>
             </tr>
           <% }); %>
@@ -237,6 +255,49 @@
   </p>
 
   <% } %>
+
+  <!-- AI preparation confirmation modal -->
+  <div id="aiModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-purple-800 rounded-xl p-6 max-w-lg w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Przygotowanie klastra dla AI</h3>
+      <p class="text-slate-400 text-sm mb-1">Klaster: <span id="aiClusterName" class="text-slate-200 font-mono text-xs"></span></p>
+      <p class="text-slate-400 text-sm mb-3">Zostaną zainstalowane następujące operatory:</p>
+      <ul class="mb-4 space-y-1.5">
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>Node Feature Discovery (NFD) Operator
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>NVIDIA GPU Operator
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>OpenShift Service Mesh Operator
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>Red Hat OpenShift Serverless Operator
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>Red Hat Authorino Operator
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>Red Hat OpenShift AI Operator
+        </li>
+      </ul>
+      <p class="text-yellow-400/80 text-xs mb-4">
+        ⚠ Instalacja może trwać <strong>30–60 minut</strong>. Klaster pozostanie dostępny.
+      </p>
+      <div id="aiError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div class="flex gap-3">
+        <button onclick="closeAiModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="aiConfirmBtn" onclick="confirmAiSetup()"
+                class="flex-1 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-lg text-sm transition-colors">
+          Uruchom instalację AI
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Destroy confirmation modal -->
   <div id="destroyModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">

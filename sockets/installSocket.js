@@ -2,9 +2,27 @@
 
 const stateStore     = require('../lib/stateStore');
 const destroyProcess = require('../lib/destroyProcess');
+const aiProcess      = require('../lib/aiProcess');
 
 function attachSocketHandlers(io) {
   io.on('connection', (socket) => {
+
+    // Client joins AI room
+    socket.on('ai:join', ({ installId }) => {
+      if (!installId) return;
+      socket.join(`ai:${installId}`);
+
+      const install = stateStore.getInstall(installId);
+      if (!install) return;
+
+      if (install.ai_enabled_at) {
+        // Already complete — notify immediately
+        socket.emit('ai:status', { aiEnabledAt: install.ai_enabled_at, isRunning: false });
+        socket.emit('ai:complete', { installId });
+      } else {
+        socket.emit('ai:status', { aiEnabledAt: null, isRunning: aiProcess.isRunning(installId) });
+      }
+    });
 
     // Client joins destroy room
     socket.on('destroy:join', ({ installId }) => {
