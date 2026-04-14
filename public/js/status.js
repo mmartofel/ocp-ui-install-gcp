@@ -259,6 +259,66 @@ function fallbackCopy(text, callback) {
   document.body.removeChild(ta);
 }
 
+// ── AI modal ──────────────────────────────────────────────────────────────────
+let aiTargetId = null;
+
+function openAiModal(id, name) {
+  aiTargetId = id;
+  document.getElementById('aiClusterName').textContent = name;
+  document.getElementById('aiError').classList.add('hidden');
+  document.getElementById('aiConfirmBtn').disabled = false;
+  document.getElementById('aiConfirmBtn').textContent = 'Uruchom instalację AI';
+  document.getElementById('aiModal').classList.remove('hidden');
+}
+
+function closeAiModal() {
+  document.getElementById('aiModal').classList.add('hidden');
+  aiTargetId = null;
+}
+
+async function confirmAiSetup() {
+  if (!aiTargetId) return;
+
+  const btn = document.getElementById('aiConfirmBtn');
+  const err = document.getElementById('aiError');
+  btn.disabled = true;
+  btn.textContent = 'Uruchamiam...';
+  err.classList.add('hidden');
+
+  try {
+    const resp = await fetch(`/ai/${aiTargetId}/start`, { method: 'POST' });
+    const data = await resp.json();
+
+    if (resp.status === 401) {
+      err.textContent = 'Sesja wygasła. Zaloguj się ponownie.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Uruchom instalację AI';
+      return;
+    }
+
+    if (!resp.ok) {
+      err.textContent = data.error || 'Błąd uruchamiania instalacji AI.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Uruchom instalację AI';
+      return;
+    }
+
+    window.location.href = `/ai/${aiTargetId}`;
+  } catch (e) {
+    err.textContent = `Błąd: ${e.message}`;
+    err.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Uruchom instalację AI';
+  }
+}
+
+// Close AI modal on backdrop click
+document.getElementById('aiModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('aiModal')) closeAiModal();
+});
+
 // ── Destroy modal ─────────────────────────────────────────────────────────────
 let destroyTargetId = null;
 
