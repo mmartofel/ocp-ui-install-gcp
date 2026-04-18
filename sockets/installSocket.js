@@ -1,8 +1,9 @@
 'use strict';
 
-const stateStore     = require('../lib/stateStore');
-const destroyProcess = require('../lib/destroyProcess');
-const aiProcess      = require('../lib/aiProcess');
+const stateStore          = require('../lib/stateStore');
+const destroyProcess      = require('../lib/destroyProcess');
+const aiProcess           = require('../lib/aiProcess');
+const machinesetProcess   = require('../lib/machinesetProcess');
 
 function attachSocketHandlers(io) {
   io.on('connection', (socket) => {
@@ -21,6 +22,29 @@ function attachSocketHandlers(io) {
         socket.emit('ai:complete', { installId });
       } else {
         socket.emit('ai:status', { aiEnabledAt: null, isRunning: aiProcess.isRunning(installId) });
+      }
+    });
+
+    // Client joins MachineSet creation room
+    socket.on('machineset:join', ({ installId }) => {
+      if (!installId) return;
+      socket.join(`machineset:${installId}`);
+
+      const install = stateStore.getInstall(installId);
+      if (!install) return;
+
+      if (install.gpu_machineset_created_at) {
+        // Already complete — notify immediately
+        socket.emit('machineset:status', {
+          gpuMachinesetCreatedAt: install.gpu_machineset_created_at,
+          isRunning:              false,
+        });
+        socket.emit('machineset:complete', { installId });
+      } else {
+        socket.emit('machineset:status', {
+          gpuMachinesetCreatedAt: null,
+          isRunning:              machinesetProcess.isRunning(installId),
+        });
       }
     });
 
