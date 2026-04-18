@@ -70,18 +70,8 @@ document.getElementById('authForm').addEventListener('submit', async (e) => {
       throw new Error(data.error || 'Błąd weryfikacji');
     }
 
-    // Update project info panel
-    infoEl.className = 'mt-4 p-3 rounded-lg text-sm border bg-green-900/30 border-green-700';
-    document.getElementById('projectInfoStatus').textContent = '✓ Weryfikacja zakończona pomyślnie';
-    document.getElementById('projectInfoStatus').className   = 'text-green-300 font-medium mb-1';
-    document.getElementById('infoProjectName').textContent   = data.projectName || data.projectId;
-    document.getElementById('infoProjectId').textContent     = data.projectId;
-    document.getElementById('infoClientEmail').textContent   = data.clientEmail;
-    document.getElementById('projectInfoDetails').classList.remove('hidden');
-
-    btn.disabled = false;
-    label.textContent = 'Weryfikuj i kontynuuj';
-    spinner.classList.add('hidden');
+    // Reload to sync server-side session state (tabs enabled, button disabled)
+    window.location.reload();
 
   } catch (err) {
     showMsg(msgEl, err.message, 'error');
