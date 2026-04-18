@@ -30,6 +30,7 @@ socket.on('destroy:failed', ({ exitCode, error }) => {
   );
   document.getElementById('logCursor').classList.add('hidden');
   showResult('failed', exitCode);
+  showForcePurgeButton();
 });
 
 // ── Log rendering ─────────────────────────────────────────────────────────────
@@ -118,6 +119,54 @@ function showResult(status, exitCode) {
 
   banner.classList.remove('hidden');
 }
+
+function showForcePurgeButton() {
+  const btn = document.getElementById('forcePurgeBtn');
+  if (!btn) return;
+  btn.classList.remove('hidden');
+  btn.addEventListener('click', openForcePurgeModal);
+}
+
+function openForcePurgeModal() {
+  document.getElementById('forcePurgeError').classList.add('hidden');
+  document.getElementById('forcePurgeConfirmBtn').disabled = false;
+  document.getElementById('forcePurgeConfirmBtn').textContent = 'Usuń metadane';
+  document.getElementById('forcePurgeModal').classList.remove('hidden');
+}
+
+function closeForcePurgeModal() {
+  document.getElementById('forcePurgeModal').classList.add('hidden');
+}
+
+async function confirmForcePurge() {
+  const btn = document.getElementById('forcePurgeConfirmBtn');
+  const err = document.getElementById('forcePurgeError');
+  btn.disabled = true;
+  btn.textContent = 'Usuwam...';
+  err.classList.add('hidden');
+
+  try {
+    const res = await fetch(`/destroy/${installId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.redirect) {
+      window.location.href = data.redirect;
+    } else {
+      err.textContent = data.error || 'Błąd usuwania metadanych.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Usuń metadane';
+    }
+  } catch (e) {
+    err.textContent = `Błąd połączenia: ${e.message}`;
+    err.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Usuń metadane';
+  }
+}
+
+document.getElementById('forcePurgeModal')?.addEventListener('click', (e) => {
+  if (e.target === document.getElementById('forcePurgeModal')) closeForcePurgeModal();
+});
 
 function applyStatus(status) {
   const indicator = document.getElementById('statusIndicator');

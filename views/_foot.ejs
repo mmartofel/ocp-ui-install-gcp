@@ -1,6 +1,9 @@
 </main>
 
-<footer class="border-t border-slate-800 px-6 py-3 text-xs text-slate-600 flex justify-between">
+<footer class="border-t border-slate-800 px-6 py-3 text-xs text-slate-600 flex justify-between items-center">
   <span>Red Hat OpenShift Installer for Google Cloud Platform</span>
-  <span>Wymagane: <code class="text-slate-500">openshift-install</code> w <code class="text-slate-500">data/installer/</code></span>
+  <span>
+    Wymagane: <code class="text-slate-500">openshift-install</code> w <code class="text-slate-500">data/installer/</code><% if (locals.installerVersion && installerVersion !== 'unknown') { %> &mdash; ok, odnaleziono wersję <code class="text-slate-400"><%= installerVersion %></code><% } %>
+  </span>
+  <a href="https://github.com/mmartofel/ocp-ui-install-gcp/tree/main" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-slate-300 transition-colors">GitHub</a>
 </footer>

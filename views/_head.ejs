@@ -36,12 +36,15 @@
       { href: '/status',  label: 'Status',        key: 'status'  },
     ]; %>
     <% navSteps.forEach(function(step, i) { %>
-      <% var isActive   = (currentPath || '').startsWith('/' + step.key); %>
-      <% var isBlocked  = (locals.hasRunningInstall && step.key !== 'install') || locals.hasRunningDestroy; %>
+      <% var isActive        = (currentPath || '').startsWith('/' + step.key); %>
+      <% var isBlockedByInstall = (locals.hasRunningInstall && step.key !== 'install') || locals.hasRunningDestroy; %>
+      <% var isBlockedByAuth    = !locals.isAuthenticated && step.key !== 'auth'; %>
+      <% var isBlocked          = isBlockedByInstall || isBlockedByAuth; %>
+      <% var blockedTitle       = isBlockedByInstall ? 'Niedostępne podczas instalacji' : 'Wymagane zalogowanie do GCP'; %>
       <div class="flex items-center gap-1">
         <% if (isBlocked) { %>
         <span class="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-slate-600 cursor-not-allowed select-none"
-              title="Niedostępne podczas instalacji">
+              title="<%= blockedTitle %>">
           <span class="w-5 h-5 rounded-full border border-slate-700 text-xs flex items-center justify-center text-slate-700">
             <%= i + 1 %>
           </span>

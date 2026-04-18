@@ -67,9 +67,10 @@
       </div>
 
       <button type="submit" id="submitBtn"
-              class="mt-5 w-full bg-rh-red hover:bg-red-700 text-white font-medium py-2.5 px-4
-                     rounded-lg transition-colors flex items-center justify-center gap-2">
-        <span id="submitLabel">Weryfikuj i kontynuuj</span>
+              <% if (sessionInfo) { %>disabled<% } %>
+              class="mt-5 w-full font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2
+                     <%= sessionInfo ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-rh-red hover:bg-red-700 text-white' %>">
+        <span id="submitLabel"><%= sessionInfo ? 'Sesja aktywna' : 'Weryfikuj i kontynuuj' %></span>
         <svg id="submitSpinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>

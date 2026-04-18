@@ -117,7 +117,7 @@
         </thead>
         <tbody>
           <% destroyedInstalls.forEach(function(cl) { %>
-            <tr class="border-b border-slate-800/50 hover:bg-slate-800/20">
+            <tr class="border-b border-slate-800/50 hover:bg-slate-800/20" data-purge-id="<%= cl.install_id %>">
               <td class="px-5 py-3 font-mono text-xs text-slate-500"><%= cl.cluster_name %>.<%= cl.base_domain %></td>
               <td class="px-5 py-3 font-mono text-xs text-slate-600"><%= cl.gcp_region %></td>
               <td class="px-5 py-3 text-xs text-slate-600">
@@ -127,12 +127,18 @@
                 <%= new Date(cl.destroyed_at).toLocaleString('pl-PL') %>
               </td>
               <td class="px-5 py-3 text-right">
-                <% if (cl.install_yaml) { %>
-                  <a href="/download/install-config/<%= cl.install_id %>"
-                     class="px-2.5 py-1 text-xs border border-slate-700 hover:border-slate-500 text-slate-500 hover:text-slate-300 rounded transition-colors">
-                    Pobierz YAML
-                  </a>
-                <% } %>
+                <div class="flex items-center justify-end gap-2">
+                  <% if (cl.install_yaml) { %>
+                    <a href="/download/install-config/<%= cl.install_id %>"
+                       class="px-2.5 py-1 text-xs border border-slate-700 hover:border-slate-500 text-slate-500 hover:text-slate-300 rounded transition-colors">
+                      Pobierz YAML
+                    </a>
+                  <% } %>
+                  <button onclick="openPurgeModal('<%= cl.install_id %>', '<%= cl.cluster_name %>.<%= cl.base_domain %>')"
+                          class="px-2.5 py-1 text-xs border border-red-900 hover:border-red-700 text-red-700 hover:text-red-500 rounded transition-colors">
+                    Usuń na zawsze
+                  </button>
+                </div>
               </td>
             </tr>
           <% }); %>
@@ -174,6 +180,20 @@
         </svg>
         Odśwież
       </button>
+      <button id="regenKubeconfigBtn" onclick="regenerateKubeconfig()"
+              class="px-3 py-1.5 text-xs border border-blue-800 hover:border-blue-600 text-blue-400 hover:text-blue-300 rounded-lg transition-colors flex items-center gap-1.5"
+              title="Pobierz nowy token OAuth używając hasła kubeadmin i zapisz nowy kubeconfig">
+        <svg id="regenIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Regeneruj kubeconfig
+      </button>
+      <button onclick="openKubeconfigModal()"
+              class="px-3 py-1.5 text-xs border border-slate-600 hover:border-slate-400 text-slate-400 hover:text-slate-200 rounded-lg transition-colors"
+              title="Zastąp kubeconfig po rotacji certyfikatów">
+        Zastąp kubeconfig
+      </button>
       <a href="/download/kubeconfig"
          class="px-3 py-1.5 text-xs bg-rh-red hover:bg-red-700 text-white rounded-lg transition-colors">
         Pobierz kubeconfig
@@ -201,6 +221,36 @@
       <p id="kubeadminPass" class="text-sm font-mono text-slate-300 blur-sm hover:blur-none transition-all cursor-pointer">ładowanie...</p>
       <button onclick="copyVal('kubeadminPass')" class="mt-2 text-xs text-slate-500 hover:text-slate-300 transition-colors">Kopiuj</button>
     </div>
+  </div>
+
+  <!-- MachineSets table -->
+  <div class="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-700">
+      <h2 class="text-sm font-semibold text-white">MachineSety</h2>
+      <% if (install && install.status === 'complete') { %>
+        <button onclick="openGpuModal('<%= install.install_id %>')"
+                class="px-3 py-1.5 text-xs bg-green-800 hover:bg-green-700 text-white rounded-lg transition-colors">
+          + Utwórz GPU MachineSet
+        </button>
+      <% } %>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-800">
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Nazwa</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Strefa</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Maszyny</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Typ instancji</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">vCPU / RAM</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">GPU / Pamięć GPU</th>
+          <th class="text-left px-5 py-2.5 text-xs text-slate-500 uppercase tracking-wider font-medium">Skaluj</th>
+          <th class="px-5 py-2.5"></th>
+        </tr>
+      </thead>
+      <tbody id="machineSetsBody">
+        <tr><td colspan="8" class="px-5 py-4 text-slate-600 text-center text-xs">Ładowanie MachineSetów...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- Nodes table -->
@@ -256,6 +306,49 @@
 
   <% } %>
 
+  <!-- Kubeconfig regeneration confirmation modal -->
+  <div id="regenModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-blue-800 rounded-xl p-6 max-w-lg w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Regeneruj kubeconfig</h3>
+      <p class="text-slate-400 text-sm mb-3">
+        Zostanie wykonane następujące działanie:
+      </p>
+      <ul class="mb-4 space-y-1.5">
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+          Pobranie tokenu OAuth z serwera klastra (użytkownik <span class="font-mono text-slate-200 mx-0.5">kubeadmin</span>)
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+          Wygenerowanie nowego pliku kubeconfig bez wbudowanego CA
+        </li>
+        <li class="flex items-center gap-2 text-xs text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+          Zastąpienie oryginalnego kubeconfig nowym plikiem
+        </li>
+      </ul>
+      <p class="text-yellow-400/80 text-xs mb-4">
+        ⚠ Operacja jest zalecana po rotacji certyfikatów TLS (np. Let's Encrypt).
+        Oryginalny kubeconfig zostanie <strong>nadpisany</strong>.
+      </p>
+      <div id="regenError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div class="flex gap-3">
+        <button onclick="closeRegenModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="regenConfirmBtn" onclick="confirmRegenKubeconfig()"
+                class="flex-1 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+          <svg id="regenConfirmIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Regeneruj
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- AI preparation confirmation modal -->
   <div id="aiModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
     <div class="bg-slate-900 border border-purple-800 rounded-xl p-6 max-w-lg w-full mx-4">
@@ -299,6 +392,157 @@
     </div>
   </div>
 
+  <!-- GPU MachineSet creation modal -->
+  <div id="gpuModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-green-800 rounded-xl p-6 max-w-lg w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-4">Utwórz GPU MachineSet</h3>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Nazwa MachineSet</label>
+          <input id="gpuMsName" type="text" value=""
+                 class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-200 font-mono focus:outline-none focus:border-green-600"
+                 placeholder="cluster-abc-worker-gpu">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Typ instancji GCP (GPU)</label>
+          <select id="gpuMachineType"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-200 font-mono focus:outline-none focus:border-green-600">
+            <optgroup label="NVIDIA L4">
+              <option value="g2-standard-4">g2-standard-4 — 4 vCPU / 16 GB RAM / 1× L4 24 GB</option>
+              <option value="g2-standard-8" selected>g2-standard-8 — 8 vCPU / 32 GB RAM / 1× L4 24 GB  ★</option>
+              <option value="g2-standard-12">g2-standard-12 — 12 vCPU / 48 GB RAM / 1× L4 24 GB</option>
+              <option value="g2-standard-16">g2-standard-16 — 16 vCPU / 64 GB RAM / 1× L4 24 GB</option>
+              <option value="g2-standard-24">g2-standard-24 — 24 vCPU / 96 GB RAM / 2× L4 48 GB</option>
+              <option value="g2-standard-32">g2-standard-32 — 32 vCPU / 128 GB RAM / 2× L4 48 GB</option>
+              <option value="g2-standard-48">g2-standard-48 — 48 vCPU / 192 GB RAM / 4× L4 96 GB</option>
+              <option value="g2-standard-96">g2-standard-96 — 96 vCPU / 384 GB RAM / 8× L4 192 GB</option>
+            </optgroup>
+            <optgroup label="NVIDIA A100 40 GB">
+              <option value="a2-highgpu-1g">a2-highgpu-1g — 12 vCPU / 85 GB RAM / 1× A100 40 GB</option>
+              <option value="a2-highgpu-2g">a2-highgpu-2g — 24 vCPU / 170 GB RAM / 2× A100 80 GB</option>
+              <option value="a2-highgpu-4g">a2-highgpu-4g — 48 vCPU / 340 GB RAM / 4× A100 160 GB</option>
+            </optgroup>
+          </select>
+          <p id="gpuTypeUnavailableWarn" class="hidden text-xs text-yellow-400 mt-1">
+            Brak dostępnych typów GPU w tej strefie.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Strefa (Zone)
+            <span class="text-slate-600 font-normal">— dostępność GPU zależy od strefy</span>
+          </label>
+          <select id="gpuZone"
+                  class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-200 font-mono focus:outline-none focus:border-green-600">
+            <!-- populated dynamically from existing MachineSets + region -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Liczba maszyn (0 = utwórz MachineSet bez uruchamiania węzłów)</label>
+          <input id="gpuReplicas" type="number" value="1" min="0" max="10"
+                 class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-200 font-mono focus:outline-none focus:border-green-600">
+        </div>
+      </div>
+
+      <p class="text-yellow-400/80 text-xs mt-4">
+        ⚠ Instancje GPU (g2/a2) są oznaczone jako <strong>Spot</strong>. Węzły mogą zająć kilka minut na uruchomienie.
+      </p>
+      <div id="gpuError" class="hidden mt-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="closeGpuModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="gpuConfirmBtn" onclick="confirmGpuMachineSet()"
+                class="flex-1 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-sm transition-colors">
+          Utwórz MachineSet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MachineSet delete confirmation modal -->
+  <div id="msDeleteModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-red-900 rounded-xl p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Usuń MachineSet</h3>
+      <p class="text-slate-400 text-sm mb-1">
+        MachineSet: <span id="msDeleteName" class="text-slate-200 font-mono text-xs"></span>
+      </p>
+
+      <!-- Warning shown when replicas > 0 -->
+      <div id="msDeleteBlockedMsg" class="hidden mt-3 p-4 bg-yellow-950/40 border border-yellow-700 rounded-lg">
+        <p class="text-yellow-300 text-sm font-medium mb-1">⚠ Nie można usunąć — MachineSet jest aktywny</p>
+        <p class="text-yellow-400/80 text-xs">
+          MachineSet ma aktualnie <strong id="msDeleteReplicaCount" class="text-yellow-200"></strong> replik.
+          Przed usunięciem musisz go najpierw <strong>wyskalować do 0</strong> używając przycisków −/+ w tabeli.
+          Po osiągnięciu 0 aktywnych maszyn przycisk usuwania stanie się dostępny.
+        </p>
+      </div>
+
+      <!-- Confirmation shown when replicas === 0 -->
+      <div id="msDeleteConfirmMsg" class="hidden mt-3">
+        <p class="text-slate-400 text-sm">
+          Ta operacja jest <strong class="text-white">nieodwracalna</strong>.
+          MachineSet i jego konfiguracja zostaną trwale usunięte z klastra.
+          Węzły zostały już usunięte (repliki = 0).
+        </p>
+      </div>
+
+      <div id="msDeleteError" class="hidden mt-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+
+      <div class="flex gap-3 mt-5">
+        <button onclick="closeMsDeleteModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Zamknij
+        </button>
+        <button id="msDeleteConfirmBtn" onclick="confirmMsDelete()"
+                class="hidden flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+          Usuń MachineSet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kubeconfig replacement modal -->
+  <div id="kubeconfigModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-slate-600 rounded-xl p-6 max-w-lg w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Zastąp kubeconfig</h3>
+      <p class="text-slate-400 text-sm mb-4">
+        Po rotacji certyfikatów (np. Let's Encrypt) oryginalny kubeconfig zawiera stare CA i przestaje działać.
+        Wgraj nowy plik wygenerowany przez <span class="font-mono text-slate-200">oc login</span>.
+      </p>
+      <div class="mb-4">
+        <label class="block text-xs text-slate-400 mb-2">Plik kubeconfig</label>
+        <input id="kubeconfigFile" type="file" accept=".yaml,.yml,.kubeconfig,"
+               class="w-full text-xs text-slate-300 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2
+                      file:mr-3 file:py-1 file:px-3 file:rounded file:border-0
+                      file:text-xs file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600
+                      focus:outline-none focus:border-slate-400 transition-colors cursor-pointer">
+        <p class="text-xs text-slate-600 mt-1.5">
+          Wygeneruj: <span class="font-mono">oc login https://api.&lt;cluster&gt;:6443 -u kubeadmin</span>
+          potem skopiuj <span class="font-mono">~/.kube/config</span>
+        </p>
+      </div>
+      <div id="kubeconfigError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div id="kubeconfigSuccess" class="hidden mb-3 p-3 bg-green-950/50 border border-green-800 rounded-lg text-xs text-green-300">
+        Kubeconfig zastąpiony pomyślnie. Odświeżanie danych klastra...
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeKubeconfigModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="kubeconfigSubmitBtn" onclick="submitKubeconfig()"
+                class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors">
+          Zastąp kubeconfig
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Destroy confirmation modal -->
   <div id="destroyModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
     <div class="bg-slate-900 border border-red-800 rounded-xl p-6 max-w-md w-full mx-4">
@@ -322,12 +566,41 @@
     </div>
   </div>
 
+  <!-- Purge cluster modal -->
+  <div id="purgeModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-red-800 rounded-xl p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Usunąć na zawsze?</h3>
+      <p class="text-slate-400 text-sm mb-1">Klaster: <span id="purgeClusterName" class="text-slate-200 font-mono text-xs"></span></p>
+      <p class="text-slate-400 text-sm mb-3">
+        Ta operacja jest <strong class="text-white">nieodwracalna</strong>.
+        Zostaną usunięte wszystkie metadane klastra z bazy danych oraz pliki instalacji z katalogu <span class="font-mono text-slate-300">tmp/</span>.
+      </p>
+      <div class="p-3 bg-yellow-950/40 border border-yellow-700 rounded-lg mb-4">
+        <p class="text-yellow-400/80 text-xs">
+          Klaster jest już usunięty z GCP. Ta akcja czyści jedynie dane lokalne — logi instalacji, kubeconfig i pliki konfiguracyjne.
+        </p>
+      </div>
+      <div id="purgeError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div class="flex gap-3">
+        <button onclick="closePurgeModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="purgeConfirmBtn" onclick="confirmPurge()"
+                class="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+          Usuń na zawsze
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <%- include('_foot') %>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  window.INSTALL_ID = '<%= installId %>';
+  window.INSTALL_ID  = '<%= installId %>';
+  window.GCP_REGION  = '<%= install ? install.gcp_region : "" %>';
 </script>
 <script src="/js/status.js"></script>
 </body>
