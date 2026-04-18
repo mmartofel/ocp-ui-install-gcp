@@ -103,4 +103,68 @@ router.post('/:installId', requireAuthApi, (req, res) => {
   return res.json({ success: true, redirect: `/destroy/${installId}` });
 });
 
+// DELETE /destroy/:installId/purge — permanently remove all DB records + tmp directory for a destroyed cluster
+router.delete('/:installId/purge', requireAuthApi, (req, res) => {
+  const { installId } = req.params;
+  const install = stateStore.getInstall(installId);
+
+  if (!install) {
+    return res.status(404).json({ error: 'Nie znaleziono instalacji.' });
+  }
+
+  const projectId    = credentialStore.getProjectId(req.session.id);
+  const installOwner = install.sa_project || install.gcp_project;
+  if (installOwner !== projectId) {
+    return res.status(403).json({ error: 'Brak dostępu do tego klastra.' });
+  }
+
+  if (!install.destroyed_at) {
+    return res.status(400).json({ error: 'Klaster nie został jeszcze usunięty z GCP.' });
+  }
+
+  if (destroyProcess.isRunning(installId)) {
+    return res.status(409).json({ error: 'Usuwanie już w toku.' });
+  }
+
+  // Remove tmp directory if it exists
+  const installDir = install.install_dir;
+  if (installDir && fs.existsSync(installDir)) {
+    try {
+      fs.rmSync(installDir, { recursive: true, force: true });
+    } catch (err) {
+      console.error(`[purge] failed to remove ${installDir}: ${err.message}`);
+    }
+  }
+
+  stateStore.purgeInstall(installId);
+  return res.json({ success: true });
+});
+
+// DELETE /destroy/:installId — force-purge cluster metadata from DB after failed destroy
+router.delete('/:installId', requireAuthApi, (req, res) => {
+  const { installId } = req.params;
+  const install = stateStore.getInstall(installId);
+
+  if (!install) {
+    return res.status(404).json({ error: 'Nie znaleziono instalacji.' });
+  }
+
+  const projectId    = credentialStore.getProjectId(req.session.id);
+  const installOwner = install.sa_project || install.gcp_project;
+  if (installOwner !== projectId) {
+    return res.status(403).json({ error: 'Brak dostępu do tego klastra.' });
+  }
+
+  if (install.destroyed_at) {
+    return res.status(400).json({ error: 'Klaster został już usunięty.' });
+  }
+
+  if (destroyProcess.isRunning(installId)) {
+    return res.status(409).json({ error: 'Usuwanie już w toku.' });
+  }
+
+  stateStore.markDestroyed(installId);
+  return res.json({ success: true, redirect: '/status' });
+});
+
 module.exports = router;

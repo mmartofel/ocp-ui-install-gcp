@@ -117,7 +117,7 @@
         </thead>
         <tbody>
           <% destroyedInstalls.forEach(function(cl) { %>
-            <tr class="border-b border-slate-800/50 hover:bg-slate-800/20">
+            <tr class="border-b border-slate-800/50 hover:bg-slate-800/20" data-purge-id="<%= cl.install_id %>">
               <td class="px-5 py-3 font-mono text-xs text-slate-500"><%= cl.cluster_name %>.<%= cl.base_domain %></td>
               <td class="px-5 py-3 font-mono text-xs text-slate-600"><%= cl.gcp_region %></td>
               <td class="px-5 py-3 text-xs text-slate-600">
@@ -127,12 +127,18 @@
                 <%= new Date(cl.destroyed_at).toLocaleString('pl-PL') %>
               </td>
               <td class="px-5 py-3 text-right">
-                <% if (cl.install_yaml) { %>
-                  <a href="/download/install-config/<%= cl.install_id %>"
-                     class="px-2.5 py-1 text-xs border border-slate-700 hover:border-slate-500 text-slate-500 hover:text-slate-300 rounded transition-colors">
-                    Pobierz YAML
-                  </a>
-                <% } %>
+                <div class="flex items-center justify-end gap-2">
+                  <% if (cl.install_yaml) { %>
+                    <a href="/download/install-config/<%= cl.install_id %>"
+                       class="px-2.5 py-1 text-xs border border-slate-700 hover:border-slate-500 text-slate-500 hover:text-slate-300 rounded transition-colors">
+                      Pobierz YAML
+                    </a>
+                  <% } %>
+                  <button onclick="openPurgeModal('<%= cl.install_id %>', '<%= cl.cluster_name %>.<%= cl.base_domain %>')"
+                          class="px-2.5 py-1 text-xs border border-red-900 hover:border-red-700 text-red-700 hover:text-red-500 rounded transition-colors">
+                    Usuń na zawsze
+                  </button>
+                </div>
               </td>
             </tr>
           <% }); %>
@@ -555,6 +561,34 @@
         <button id="destroyConfirmBtn" onclick="confirmDestroy()"
                 class="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
           Usuń klaster
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Purge cluster modal -->
+  <div id="purgeModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-red-800 rounded-xl p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-bold text-white mb-2">Usunąć na zawsze?</h3>
+      <p class="text-slate-400 text-sm mb-1">Klaster: <span id="purgeClusterName" class="text-slate-200 font-mono text-xs"></span></p>
+      <p class="text-slate-400 text-sm mb-3">
+        Ta operacja jest <strong class="text-white">nieodwracalna</strong>.
+        Zostaną usunięte wszystkie metadane klastra z bazy danych oraz pliki instalacji z katalogu <span class="font-mono text-slate-300">tmp/</span>.
+      </p>
+      <div class="p-3 bg-yellow-950/40 border border-yellow-700 rounded-lg mb-4">
+        <p class="text-yellow-400/80 text-xs">
+          Klaster jest już usunięty z GCP. Ta akcja czyści jedynie dane lokalne — logi instalacji, kubeconfig i pliki konfiguracyjne.
+        </p>
+      </div>
+      <div id="purgeError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+      <div class="flex gap-3">
+        <button onclick="closePurgeModal()"
+                class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+          Anuluj
+        </button>
+        <button id="purgeConfirmBtn" onclick="confirmPurge()"
+                class="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+          Usuń na zawsze
         </button>
       </div>
     </div>

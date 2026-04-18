@@ -393,6 +393,68 @@ document.getElementById('destroyModal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('destroyModal')) closeDestroyModal();
 });
 
+// ── Purge cluster (permanent metadata removal) ────────────────────────────────
+let purgeTargetId = null;
+
+function openPurgeModal(id, name) {
+  purgeTargetId = id;
+  document.getElementById('purgeClusterName').textContent = name;
+  document.getElementById('purgeError').classList.add('hidden');
+  document.getElementById('purgeConfirmBtn').disabled = false;
+  document.getElementById('purgeConfirmBtn').textContent = 'Usuń na zawsze';
+  document.getElementById('purgeModal').classList.remove('hidden');
+}
+
+function closePurgeModal() {
+  document.getElementById('purgeModal').classList.add('hidden');
+  purgeTargetId = null;
+}
+
+async function confirmPurge() {
+  if (!purgeTargetId) return;
+
+  const btn = document.getElementById('purgeConfirmBtn');
+  const err = document.getElementById('purgeError');
+  btn.disabled = true;
+  btn.textContent = 'Usuwam...';
+  err.classList.add('hidden');
+
+  try {
+    const resp = await fetch(`/destroy/${purgeTargetId}/purge`, { method: 'DELETE' });
+    const data = await resp.json();
+
+    if (resp.status === 401) {
+      err.textContent = 'Sesja wygasła. Zaloguj się ponownie.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Usuń na zawsze';
+      return;
+    }
+
+    if (!resp.ok) {
+      err.textContent = data.error || 'Błąd usuwania danych klastra.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Usuń na zawsze';
+      return;
+    }
+
+    // Remove the table row directly — no full page reload needed
+    const row = document.querySelector(`[data-purge-id="${purgeTargetId}"]`);
+    if (row) row.remove();
+    closePurgeModal();
+  } catch (e) {
+    err.textContent = `Błąd połączenia: ${e.message}`;
+    err.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Usuń na zawsze';
+  }
+}
+
+document.getElementById('purgeModal')?.addEventListener('click', (e) => {
+  if (e.target === document.getElementById('purgeModal')) closePurgeModal();
+});
+
 // Reload when user returns to this tab (e.g. after re-login in another tab)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && installId) loadStatus();

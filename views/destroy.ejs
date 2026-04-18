@@ -27,10 +27,16 @@
         <p id="resultTitle" class="text-sm font-semibold"></p>
         <p id="resultDetail" class="text-xs mt-1 opacity-75"></p>
       </div>
-      <a href="/status"
-         class="px-4 py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 text-slate-200 rounded-lg transition-colors whitespace-nowrap flex-shrink-0">
-        Przejdź do Status →
-      </a>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button id="forcePurgeBtn"
+                class="hidden px-4 py-2 text-sm font-medium bg-red-950 hover:bg-red-900 border border-red-800 hover:border-red-700 text-red-300 rounded-lg transition-colors whitespace-nowrap">
+          Wymuś usunięcie metadanych
+        </button>
+        <a href="/status"
+           class="px-4 py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 text-slate-200 rounded-lg transition-colors whitespace-nowrap">
+          Przejdź do Status →
+        </a>
+      </div>
     </div>
   </div>
 
@@ -61,6 +67,34 @@
     Wszystkie zasoby GCP klastra zostaną trwale usunięte.
   </div>
 
+</div>
+
+<!-- Force-purge confirmation modal -->
+<div id="forcePurgeModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+  <div class="bg-slate-900 border border-red-800 rounded-xl p-6 max-w-md w-full mx-4">
+    <h3 class="text-lg font-bold text-white mb-2">Wymusić usunięcie metadanych?</h3>
+    <p class="text-slate-400 text-sm mb-3">
+      Projekt GCP prawdopodobnie nie istnieje — klaster nie został usunięty przez instalator.
+    </p>
+    <div class="p-3 bg-yellow-950/40 border border-yellow-700 rounded-lg mb-4">
+      <p class="text-yellow-300 text-xs font-medium mb-1">⚠ Zasoby GCP nie zostaną usunięte</p>
+      <p class="text-yellow-400/80 text-xs">
+        Usunięte zostaną wyłącznie metadane klastra z tego interfejsu.
+        Jeśli projekt GCP nadal istnieje, usuń zasoby ręcznie lub przez konsolę GCP.
+      </p>
+    </div>
+    <div id="forcePurgeError" class="hidden mb-3 p-3 bg-red-950/50 border border-red-800 rounded-lg text-xs text-red-300"></div>
+    <div class="flex gap-3">
+      <button onclick="closeForcePurgeModal()"
+              class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm hover:border-slate-400 transition-colors">
+        Anuluj
+      </button>
+      <button id="forcePurgeConfirmBtn" onclick="confirmForcePurge()"
+              class="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+        Usuń metadane
+      </button>
+    </div>
+  </div>
 </div>
 
 <%- include('_foot') %>
