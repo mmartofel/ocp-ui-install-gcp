@@ -3,6 +3,7 @@ data/installer/
 data/db/
 tmp/
 *.log
+*.gz
 pull-secret.yaml
 pull-secret.json
 pull-secret.txt
